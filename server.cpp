@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int main() {
+int server() {
     // TODO: remove this
     std::string server_port = "8000";
     int QUEUE_LENGTH = 10;
@@ -69,4 +69,8 @@ int main() {
 
     close(sockfd);
     freeaddrinfo(servinfo);
+}
+
+int main() {
+    
 }

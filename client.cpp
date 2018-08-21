@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int main() {
+int client() {
     struct addrinfo hints;
     struct addrinfo *servinfo;
 
@@ -23,7 +23,37 @@ int main() {
 
     int sockfd;
     struct addrinfo *p;
-    for (p = servinfo; p != std::nullptr; p = p->ai_next) {
+    for (p = servinfo; p != nullptr; p = p->ai_next) {
+        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            std::cerr << "socket(): " << strerror(errno) << std::endl;
+            continue;
+        }
 
+        if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+            close(sockfd);
+            std::cerr << "connect(): " << strerror(errno) << std::endl;
+            continue;
+        }
+
+        break;
     }
+
+    if (p == nullptr) {
+        std::cerr << "err: failed to connect" << std::endl;
+        return 1;
+    }
+
+    freeaddrinfo(servinfo);
+
+    // begin sending data or smth
+
+    // end read data
+
+    close(sockfd);
+
+    return 0;
+}
+
+int main() {
+
 }
