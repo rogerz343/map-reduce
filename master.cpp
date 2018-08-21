@@ -1,10 +1,12 @@
 #include "master.h"
 
-Master::Master(std::string server_port) : server_port(server_port) {
+Master::Master(std::string server_port) :
+buffer(BUFFER_SIZE),
+server_port(server_port) {
 
 }
 
-int Master::start_server(std::string server_port) {
+int Master::start_server() {
     struct addrinfo hints;
     struct addrinfo *servinfo;
 
@@ -51,7 +53,7 @@ int Master::start_server(std::string server_port) {
         std::string worker_data;
         int bytes_received;
         do {
-            if ((bytes_received = recv(client_fd, &buffer[0], buffer.length(), 0)) == -1) {
+            if ((bytes_received = recv(client_fd, &buffer[0], buffer.size(), 0)) == -1) {
                 std::cerr << "recv(): " << strerror(errno);
                 break;
             }
@@ -61,7 +63,7 @@ int Master::start_server(std::string server_port) {
         } while (bytes_received > 0);
 
         /* do stuff with the data here */
-        cout << worker_data;
+        std::cout << worker_data;
         
         close(client_fd);
     }

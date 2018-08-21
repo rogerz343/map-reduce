@@ -12,16 +12,20 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "machine.h"
+
 class Master {
 private:
     static const int QUEUE_LENGTH = 10;
     static const int BUFFER_SIZE = 4096;
-    std::vector<char> buffer(BUFFER_SIZE);
+    std::vector<char> buffer;
 
     const std::string server_port;
     std::set<Machine> workers;
 public:
-    int start_server(std::string server_port);
+    Master(std::string server_port);
+
+    int start_server();
 };
 
 #endif

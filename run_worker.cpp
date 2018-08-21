@@ -16,7 +16,7 @@ int client(std::string server_ip, std::string server_port) {
     hints.ai_socktype = SOCK_STREAM;
 
     int status;
-    if ((status == getaddrinfo(server_ip, server_port, &hints, &servinfo)) != 0) {
+    if ((status = getaddrinfo(server_ip.c_str(), server_port.c_str(), &hints, &servinfo)) != 0) {
         std::cerr << "getaddrinfo(): " << gai_strerror(status) << std::endl;
         return 1;
     }
@@ -46,7 +46,10 @@ int client(std::string server_ip, std::string server_port) {
     freeaddrinfo(servinfo);
 
     // begin sending data or smth
-
+    while (true) {
+        sleep(1);
+        send(sockfd, "test message\n", 13, 0);
+    }
     // end read data
 
     close(sockfd);
@@ -55,5 +58,5 @@ int client(std::string server_ip, std::string server_port) {
 }
 
 int main() {
-    
+    client("127.0.0.1", "8000");
 }
