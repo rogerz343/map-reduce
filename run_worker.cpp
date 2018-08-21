@@ -46,7 +46,7 @@ int client(std::string server_ip, std::string server_port) {
     freeaddrinfo(servinfo);
 
     // begin sending data or smth
-    while (true) {
+    for (int i = 0; i < 5; ++i) {
         sleep(1);
         send(sockfd, "test message\n", 13, 0);
     }
