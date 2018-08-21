@@ -6,13 +6,13 @@
 #include "definitions.h"
 
 class Machine {
-private:
-    std::string hostname;
-    std::string ip;
+public:
+    const std::string hostname;
+    const std::string port;
     MachineStatus status;
     TaskType tasktype;
-public:
 
+    Machine(std::string hostname, std::string port);
 };
 
 #endif

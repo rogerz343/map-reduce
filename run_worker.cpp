@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "definitions.h"
+
 int client(std::string server_ip, std::string server_port) {
     struct addrinfo hints;
     struct addrinfo *servinfo;
@@ -46,11 +48,15 @@ int client(std::string server_ip, std::string server_port) {
     freeaddrinfo(servinfo);
 
     // begin sending data or smth
-    for (int i = 0; i < 5; ++i) {
-        sleep(1);
-        send(sockfd, "test message\n", 13, 0);
+    int bytes_sent;
+    if ((bytes_sent = send(sockfd, connect_msg, connect_msg_len, 0)) == -1) {
+        std::cerr << "send(): " << strerror(errno) << std::endl;
+        close(sockfd);
+        freeaddrinfo(servinfo);
+        return 1;
     }
-    // end read data
+    
+    // end send data
 
     close(sockfd);
 

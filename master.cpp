@@ -2,7 +2,8 @@
 
 Master::Master(std::string server_port) :
 buffer(BUFFER_SIZE),
-server_port(server_port) {
+server_port(server_port),
+phase(Phase::map_phase) {
 
 }
 
@@ -46,7 +47,7 @@ int Master::start_server() {
     int client_fd;
     while (true) {
         if ((client_fd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size)) == -1) {
-            std::cerr << "accept(): " << strerror(errno) << std::endl;
+            std::cerr << "accept(): " << strerror(errno) << std::endl << "Skipping." << std::endl;
             continue;
         }
 
@@ -62,7 +63,18 @@ int Master::start_server() {
             worker_data.append(buffer.cbegin(), buffer.cend());
         } while (bytes_received > 0);
 
+        char client_host[1024];
+        char client_service[20];
+        if (status = getnameinfo((sockaddr *) &client_addr, addr_size, client_host, sizeof(client_host), client_service, sizeof(client_service), 0)) != 0) {
+            std::cerr << "getnameinfo(): " << gai_strerror(status) << std::endl << "Skipping." << std::endl;
+            continue;
+        }
+
         /* do stuff with the data here */
+        if (worker_data == connect_msg) {
+            Machine client(client_host, client_service);
+            workers.insert(client);
+        }
         std::cout << worker_data;
         
         close(client_fd);

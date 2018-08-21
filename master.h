@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <set>
 #include <vector>
 
@@ -12,7 +13,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "definitions.h"
 #include "machine.h"
+#include "maptask.h"
 
 class Master {
 private:
@@ -22,6 +25,14 @@ private:
 
     const std::string server_port;
     std::set<Machine> workers;
+
+    Phase phase;
+
+    std::map<MapTask, bool> map_task_status;
+    std::map<MapTask, std::vector<Machine>> map_task_assignments;
+
+    std::map<ReduceTask, bool> reduce_task_status;
+    std::map<ReduceTask, std::vector<Machine>> reduce_task_assignments;
 public:
     Master(std::string server_port);
 
