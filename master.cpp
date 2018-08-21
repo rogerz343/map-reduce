@@ -1,20 +1,10 @@
-#include <cerrno>
-#include <cstring>
-#include <iostream>
+#include "master.h"
 
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
+Master::Master(std::string server_port) : server_port(server_port) {
 
-int server() {
-    // TODO: remove this
-    std::string server_port = "8000";
-    int QUEUE_LENGTH = 10;
-    char buffer[10];
-    int RECV_BUFFER_SIZE = 10;
-    // END
+}
 
+int Master::start_server(std::string server_port) {
     struct addrinfo hints;
     struct addrinfo *servinfo;
 
@@ -58,19 +48,24 @@ int server() {
             continue;
         }
 
+        std::string worker_data;
         int bytes_received;
-        if ((bytes_received = recv(client_fd, buffer, RECV_BUFFER_SIZE, 0)) == -1) {
-            std::cerr << "recv(): " << strerror(errno);
-            continue;
-        }
+        do {
+            if ((bytes_received = recv(client_fd, &buffer[0], buffer.length(), 0)) == -1) {
+                std::cerr << "recv(): " << strerror(errno);
+                break;
+            }
 
+            // in the future, probably should write to a file
+            worker_data.append(buffer.cbegin(), buffer.cend());
+        } while (bytes_received > 0);
+
+        /* do stuff with the data here */
+        cout << worker_data;
         
+        close(client_fd);
     }
 
     close(sockfd);
     freeaddrinfo(servinfo);
-}
-
-int main() {
-    
 }

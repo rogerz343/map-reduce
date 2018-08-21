@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int client() {
+int client(std::string server_ip, std::string server_port) {
     struct addrinfo hints;
     struct addrinfo *servinfo;
 
@@ -55,5 +55,5 @@ int client() {
 }
 
 int main() {
-
+    
 }
