@@ -1,5 +1,5 @@
-#ifndef MAPTASK_H
-#define MAPTASK_H
+#ifndef REDUCETASK_H
+#define REDUCETASK_H
 
 #include <functional>
 #include <iostream>
@@ -8,32 +8,22 @@
 
 #include "definitions.h"
 
-template <typename Kin, typename Vin, typename Kout, typename Vout>
 class ReduceTask {
 private:
-    std::unordered_multimap<Kout, Vout> inputs;
-    std::vector<std::pair<Kin, Vin>> outputs;
+    std::unordered_map<std::string, std::vector<std::string>> inputs;
+    std::unordered_map<std::string, std::vector<std::string>> outputs;
+
+    std::function<std::vector<std::string>(std::pair<std::string, std::vector<std::string>>)> reduce_func;
 
 public:
-    std::function<std::pair<Kout, Vout>(std::pair<Kin, std::vector<Vin>>)> reduce_func;
-
-    ReduceTask(std::unordered_multimap<Kin, Vin> inputs,
-            std::vector<std::pair<Kout, Vout>> outputs,
-            std::function<std::pair<Kout, Vout>(std::pair<Kin, Vin>)> map_func) :
-            inputs(inputs), outputs(outputs), map_func(map_func) {}
+    ReduceTask(std::unordered_map<std::string, std::vector<std::string>> inputs,
+            std::unordered_map<std::string, std::vector<std::string>> outputs,
+            std::function<std::vector<std::string>(std::pair<std::string, std::vector<std::string>>)> reduce_func);
     
-    void run_task() {
-        while (!inputs.empty()) {
-            std::pair<Kin, Vin> input = inputs.pop_back();
-            outputs.push_back(map_func(input));
-        }
-    }
+    void run_task();
 
-    template <typename Ki, typename Vi, typename Ko, typename Vo>
-    friend std::istream& operator>>(std::istream &is, MapTask<Ki, Vi, Ko, Vo> &mt);
-
-    template <typename Ki, typename Vi, typename Ko, typename Vo>
-    friend std::ostream& operator<<(std::ostream &os, const MapTask<Kin, Vin, Kout, Vout> &mt);
+    friend std::istream& operator>>(std::istream &is, ReduceTask &rt);
+    friend std::ostream& operator<<(std::ostream &os, const ReduceTask &rt);
 };
 
 #endif
