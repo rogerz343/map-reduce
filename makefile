@@ -14,4 +14,5 @@ machine.o: machine.h machine.cpp
 	g++ -std=c++14 -Wall -c machine.cpp
 
 clean:
-	rm *.o
+	rm -f *.o
+	rm -f *.h.gch

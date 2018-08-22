@@ -29,10 +29,10 @@ private:
     Phase phase;
 
     std::map<MapTask, bool> map_task_status;
-    std::map<MapTask, std::vector<Machine>> map_task_assignments;
+    std::map<MapTask, Machine> map_task_assignments;
 
     std::map<ReduceTask, bool> reduce_task_status;
-    std::map<ReduceTask, std::vector<Machine>> reduce_task_assignments;
+    std::map<ReduceTask, Machine> reduce_task_assignments;
 public:
     Master(std::string server_port);
 
