@@ -1,20 +1,33 @@
 #include "maptask.h"
 
-MapTask::MapTask(std::vector<std::pair<std::string, std::string>> inputs,
-        std::unordered_map<std::string, std::vector<std::string>> outputs,
+MapTask::MapTask(std::string taskname,
         std::function<std::vector<std::pair<std::string, std::string>>(std::pair<std::string, std::string>)> map_func) :
-        inputs(inputs), outputs(outputs), map_func(map_func) {}
+        taskname(taskname), map_func(map_func) {}
 
 void MapTask::run_task() {
-    for (std::pair<std::string, std::string> &input : inputs) {
-        std::vector<std::pair<std::string, std::string>> output = map_func(input);
-        for (std::pair<std::string, std::string> &kv : output) {
-            if (outputs.find(kv.first) == outputs.end()) {
-                outputs[kv.first] = std::vector<std::string>();
-            }
-            outputs[kv.first].push_back(kv.second);
+    std::ifstream input_file(taskname + ".mtin");
+    if (!input_file.is_open()) {
+        // error; stop
+        return;
+    }
+    std::ofstream output_file(taskname + ".mtout", std::ios::trunc);
+    if (!output_file.is_open()) {
+        // error; stop
+        return;
+    }
+
+    std::string line;
+    while (std::getline(input_file, line)) {
+        int delim_idx = line.find(DELIMITER);
+        std::pair<std::string, std::string> kv_in(line.substr(0, delim_idx), line.substr(delim_idx + 1));
+        std::vector<std::pair<std::string, std::string>> output = map_func(kv_in);
+        for (std::pair<std::string, std::string> &kv_out : output) {
+            output_file << kv_out.first << DELIMITER << kv_out.second << std::endl;
         }
     }
+
+    input_file.close();
+    output_file.close();
 }
 
 std::istream& operator>>(std::istream &is, MapTask &mt) {

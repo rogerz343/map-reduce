@@ -17,9 +17,6 @@
 #include "machine.h"
 #include "maptask.h"
 
-template <typename Kin, typename Vin,
-          typename Kinter, typename Vinter,
-          typename Kout, typename Vout>
 class Master {
 private:
     static const int QUEUE_LENGTH = 10;
@@ -31,8 +28,8 @@ private:
 
     Phase phase;
 
-    std::map<MapTask<Kin, Vin, Kinter, Vinter>, TaskStatus> map_task_status;
-    std::map<MapTask<Kin, Vin, Kinter, Vinter>, Machine> map_task_assignments;
+    std::map<MapTask, TaskStatus> map_task_status;
+    std::map<MapTask, Machine> map_task_assignments;
 
     std::map<ReduceTask, TaskStatus> reduce_task_status;
     std::map<ReduceTask, Machine> reduce_task_assignments;
@@ -106,7 +103,7 @@ public:
             }
 
             /* do stuff with the data here */
-            if (worker_data == connect_msg) {
+            if (worker_data == CONNECT_MSG) {
                 Machine client(client_host, client_service);
                 workers.insert(client);
             }

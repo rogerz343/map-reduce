@@ -49,7 +49,7 @@ int client(std::string server_ip, std::string server_port) {
 
     // begin sending data or smth
     int bytes_sent;
-    if ((bytes_sent = send(sockfd, connect_msg, connect_msg_len, 0)) == -1) {
+    if ((bytes_sent = send(sockfd, CONNECT_MSG, CONNECT_MSG_LEN, 0)) == -1) {
         std::cerr << "send(): " << strerror(errno) << std::endl;
         close(sockfd);
         freeaddrinfo(servinfo);

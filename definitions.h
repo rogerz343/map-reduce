@@ -9,7 +9,9 @@ enum class TaskStatus { unassigned, in_progress, finished };
 enum class MachineStatus { available, in_progress, finished, failed };
 enum class Phase { map_phase, reduce_phase };
 
-constexpr char connect_msg[] = "connected";
-constexpr char connect_msg_len = 9;
+constexpr char CONNECT_MSG[] = "connected";
+constexpr char CONNECT_MSG_LEN = 9;
+
+constexpr char DELIMITER = '^';
 
 #endif
