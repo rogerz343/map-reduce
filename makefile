@@ -19,5 +19,5 @@ machine.o: machine.h machine.cpp
 clean:
 	rm -f *.o
 	rm -f *.h.gch
-	rm maptask
-	rm reducetask
+	rm -f maptask
+	rm -f reducetask

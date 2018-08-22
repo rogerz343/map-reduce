@@ -1,9 +1,13 @@
 #include "master.h"
 
-Master::Master(std::string server_port) :
+Master::Master(std::string server_port,
+        std::vector<std::string> input_files,
+        int num_splits) :
         buffer(BUFFER_SIZE),
         server_port(server_port),
-        phase(Phase::map_phase) {}
+        phase(Phase::map_phase) {
+    
+}
 
 int Master::start_server() {
     struct addrinfo hints;
@@ -68,12 +72,12 @@ int Master::start_server() {
             continue;
         }
 
-        /* do stuff with the data here */
         if (worker_data == CONNECT_MSG) {
             Machine client(client_host, client_service);
             workers.insert(client);
+
+            // send a task to the worker
         }
-        std::cout << worker_data;
         
         close(client_fd);
     }

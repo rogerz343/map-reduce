@@ -15,7 +15,6 @@
 
 #include "definitions.h"
 #include "machine.h"
-#include "maptask.h"
 
 class Master {
 private:
@@ -28,13 +27,13 @@ private:
 
     Phase phase;
 
-    std::map<MapTask, TaskStatus> map_task_status;
-    std::map<MapTask, Machine> map_task_assignments;
+    std::map<Task, TaskStatus> map_task_status;
+    std::map<Task, Machine> map_task_assignments;
 
-    std::map<ReduceTask, TaskStatus> reduce_task_status;
-    std::map<ReduceTask, Machine> reduce_task_assignments;
+    std::map<Task, TaskStatus> reduce_task_status;
+    std::map<Task, Machine> reduce_task_assignments;
 public:
-    Master(std::string server_port);
+    Master(std::string server_port, std::vector<std::string> input_files, int num_splits);
 
     int Master::start_server();
 };

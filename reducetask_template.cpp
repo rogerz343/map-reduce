@@ -9,11 +9,13 @@
  * the name of the task, and this file is assumed to exist). The input file
  * represents a map<string, vector<string>>. Each map consists of two lines. The
  * first line contains the key. The second line contains the value, where each
- * string in the vector<string> is delimited by DELIMITER (defined in
- * "definitions.h").
+ * string in the vector<string> is delimited by DELIMITER_INLINE and each line
+ * is delimited by DELIMITER_NEWLINE (as opposed to '\n'); these constants are
+ * defined in "definitions.h".
  * 
  * The output data is stored in the file "[taskname].rtout". Each line of the
- * output file is a key-value pair, with each pair delimited by DELIMITER.
+ * output file is a key-value pair, with each pair delimited by DELIMITER_INLINE
+ * and each line delimited by DELIMITER_NEWLINE.
  */
 
 #include <fstream>
@@ -22,8 +24,9 @@
 
 #include "definitions.h"
 
+// ATTENTION: rewrite this function to do the desired task
 std::string reduce_func(std::pair<std::string, std::vector<std::string>> input) {
-    return "";
+    return std::to_string(input.second.size());
 }
 
 int run_task(std::string taskname) {
@@ -38,12 +41,12 @@ int run_task(std::string taskname) {
         std::vector<std::string> values;
         size_t index = 0;
         std::string token;
-        while ((index = val_line.find(DELIMITER)) != std::string::npos) {
+        while ((index = val_line.find(DELIMITER_INLINE)) != std::string::npos) {
             values.push_back(val_line.substr(0, index));
             val_line.erase(0, index + 1);
         }
-        std::string output = reduce_func(std::pair<std::string, std::vector<std::string>>(key_line, values));
-        output_file << key_line << DELIMITER << output << std::endl;
+        std::string output = reduce_func(std::make_pair(key_line, values));
+        output_file << key_line << DELIMITER_INLINE << output << DELIMITER_NEWLINE;
     }
 
     input_file.close();
