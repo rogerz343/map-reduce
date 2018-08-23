@@ -1,12 +1,26 @@
 #include "master.h"
 
-Master::Master(std::string server_port,
+Master::Master(std::string master_name,
+        std::string server_port,
         std::vector<std::string> input_files,
         int num_splits) :
         buffer(BUFFER_SIZE),
+        master_name(master_name),
         server_port(server_port),
         phase(Phase::map_phase) {
-    
+    int split_size = input_files.size() / num_splits;
+    for (int i = 0; i < num_splits; ++i) {
+        std::string split_name = master_name + "_split" + std::to_string(i);
+        std::ofstream split_file(split_name, std::ios::trunc);
+        for (int j = 0; j < split_size; ++j) {
+            std::string input_filename = input_files.back();
+            std::ifstream input_file(input_filename);
+            input_files.pop_back();
+
+            split_file << input_filename;
+            split_file << input_file.rdbuf();
+        }
+    }
 }
 
 int Master::start_server() {

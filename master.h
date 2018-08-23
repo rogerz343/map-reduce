@@ -1,8 +1,17 @@
+/**
+ * master.h
+ * 
+ * input_files should be a list of filenames, where each file represents one key-value input pair.
+ * The filename will be used as the key, and the contents of the file will be used as the value.
+ * 
+ */
+
 #ifndef MASTER_H
 #define MASTER_H
 
 #include <cerrno>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <set>
@@ -22,6 +31,7 @@ private:
     static const int BUFFER_SIZE = 4096;
     std::vector<char> buffer;
 
+    const std::string master_name;
     const std::string server_port;
     std::set<Machine> workers;
 
@@ -33,7 +43,10 @@ private:
     std::map<Task, TaskStatus> reduce_task_status;
     std::map<Task, Machine> reduce_task_assignments;
 public:
-    Master(std::string server_port, std::vector<std::string> input_files, int num_splits);
+    Master(std::string master_name,
+            std::string server_port,
+            std::vector<std::string> input_files,
+            int num_splits);
 
     int Master::start_server();
 };

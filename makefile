@@ -21,3 +21,4 @@ clean:
 	rm -f *.h.gch
 	rm -f maptask
 	rm -f reducetask
+	rm -f run_worker
