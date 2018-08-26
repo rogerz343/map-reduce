@@ -37,18 +37,18 @@ private:
 
     Phase phase;
 
-    std::map<Task, TaskStatus> map_task_status;
-    std::map<Task, Machine> map_task_assignments;
+    std::map<Task, TaskStatus> map_task_statuses;
+    std::map<Task, Machine> map_task_assignments;       // future implementation: handle failures
 
-    std::map<Task, TaskStatus> reduce_task_status;
-    std::map<Task, Machine> reduce_task_assignments;
+    std::map<Task, TaskStatus> reduce_task_statuses;
+    std::map<Task, Machine> reduce_task_assignments;    // future implementation: handle failures
 public:
     Master(std::string master_name,
             std::string server_port,
             std::vector<std::string> input_files,
             int num_splits);
 
-    int Master::start_server();
+    int start_server();
 };
 
 #endif

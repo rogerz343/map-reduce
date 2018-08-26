@@ -10,16 +10,35 @@ Master::Master(std::string master_name,
         phase(Phase::map_phase) {
     int split_size = input_files.size() / num_splits;
     for (int i = 0; i < num_splits; ++i) {
-        std::string split_name = master_name + "_split" + std::to_string(i);
+        std::string split_name = master_name + "_map_split" + std::to_string(i);
         std::ofstream split_file(split_name, std::ios::trunc);
         for (int j = 0; j < split_size; ++j) {
             std::string input_filename = input_files.back();
-            std::ifstream input_file(input_filename);
             input_files.pop_back();
+            std::ifstream input_file(input_filename);
 
-            split_file << input_filename;
-            split_file << input_file.rdbuf();
+            split_file << input_filename << DELIMITER_NEWLINE;
+            split_file << input_file.rdbuf() << DELIMITER_NEWLINE;
+
+            input_file.close();
         }
+
+        // remainder of files go in last task
+        if (i == num_splits - 1) {
+            while (!input_files.empty()) {
+                std::string input_filename = input_files.back();
+                input_files.pop_back();
+                std::ifstream input_file(input_filename);
+
+                split_file << input_filename << DELIMITER_NEWLINE;
+                split_file << input_file.rdbuf() << DELIMITER_NEWLINE;
+
+                input_file.close();
+            }
+        }
+
+        split_file.close();
+        map_task_statuses[split_name] = TaskStatus::unassigned;
     }
 }
 
@@ -81,7 +100,7 @@ int Master::start_server() {
 
         char client_host[1024];
         char client_service[20];
-        if (status = getnameinfo((sockaddr *) &client_addr, addr_size, client_host, sizeof(client_host), client_service, sizeof(client_service), 0)) != 0) {
+        if ((status = getnameinfo((sockaddr *) &client_addr, addr_size, client_host, sizeof(client_host), client_service, sizeof(client_service), 0)) != 0) {
             std::cerr << "getnameinfo(): " << gai_strerror(status) << std::endl << "Skipping." << std::endl;
             continue;
         }
@@ -91,6 +110,39 @@ int Master::start_server() {
             workers.insert(client);
 
             // send a task to the worker
+            Task t;
+            if (phase == Phase::map_phase) {
+                for (std::pair<const Task, TaskStatus> &kv : map_task_statuses) {
+                    if (kv.second == TaskStatus::unassigned) {
+                        t = kv.first;
+                        break;
+                    }
+                }
+                if (!t.empty()) {
+                    map_task_statuses[t] = TaskStatus::in_progress;
+                    map_task_assignments[t] = client;
+                }
+            } else if (phase == Phase::reduce_phase) {
+                for (std::pair<const Task, TaskStatus> &kv : reduce_task_statuses) {
+                    if (kv.second == TaskStatus::unassigned) {
+                        t = kv.first;
+                        break;
+                    }
+                }
+                if (!t.empty()) {
+                    reduce_task_statuses[t] = TaskStatus::in_progress;
+                    reduce_task_assignments[t] = client;
+                }
+            } else {
+                // this should never happen; remove this code after confident
+                std::cerr << "should never happen: new connection after reduce done";
+            }
+            // send the task file over
+            if (!t.empty()) {
+                std::ifstream task_file(t);
+                
+            }
+            
         }
         
         close(client_fd);
@@ -98,4 +150,5 @@ int Master::start_server() {
 
     close(sockfd);
     freeaddrinfo(servinfo);
+    return 0;
 }

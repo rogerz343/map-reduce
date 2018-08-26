@@ -7,12 +7,14 @@
 
 class Machine {
 public:
-    const std::string hostname;
-    const std::string port;
-    MachineStatus status;
-    TaskType tasktype;
+    std::string hostname;
+    std::string port;
 
+    Machine();
     Machine(std::string hostname, std::string port);
+    Machine(const Machine &right);
+    Machine operator=(const Machine &right);
+    bool operator<(const Machine &right) const;
 };
 
 #endif

@@ -1,6 +1,7 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <vector>
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -55,8 +56,24 @@ int client(std::string server_ip, std::string server_port) {
         freeaddrinfo(servinfo);
         return 1;
     }
-    
     // end send data
+
+    // wait for tasks/commands from the master and then execute them
+    while (true) {
+        std::string master_data;
+        std::vector<char> buffer;
+        int bytes_received;
+        do {
+            if ((bytes_received = recv(sockfd, &buffer[0], buffer.size(), 0)) == -1) {
+                std::cerr << "recv(): " << strerror(errno);
+                break;
+            }
+
+            // in the future, probably should write to a file
+            master_data.append(buffer.cbegin(), buffer.cend());
+        } while (bytes_received > 0);
+        
+    }
 
     close(sockfd);
 
