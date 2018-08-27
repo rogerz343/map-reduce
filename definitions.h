@@ -12,8 +12,8 @@ enum class TaskStatus { unassigned, in_progress, finished };
 enum class MachineStatus { available, in_progress, finished, failed };
 enum class Phase { map_phase, intermediate_phase, reduce_phase, finished_phase };
 
-constexpr char CONNECT_MSG[] = "connected";
-constexpr char CONNECT_MSG_LEN = 9;
+constexpr char CONNECT_MSG[] = "###connected###";
+constexpr char CONNECT_MSG_LEN = 15;
 
 constexpr char NEW_TASK_MSG[] = "new_task";
 constexpr char NEW_TASK_MSG_LEN = 8;

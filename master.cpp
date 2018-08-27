@@ -4,7 +4,6 @@ Master::Master(std::string master_name,
         std::string server_port,
         std::vector<std::string> input_files,
         int num_splits) :
-        buffer(BUFFER_SIZE),
         master_name(master_name),
         server_port(server_port),
         phase(Phase::map_phase) {
@@ -86,64 +85,67 @@ int Master::start_server() {
             continue;
         }
 
+        // read bytes and communicate back and forth until client closes connection
         std::string worker_data;
         int bytes_received;
         do {
-            if ((bytes_received = recv(client_fd, &buffer[0], buffer.size(), 0)) == -1) {
+            if ((bytes_received = recv(client_fd, buffer, BUFFER_SIZE, 0)) == -1) {
                 std::cerr << "recv(): " << strerror(errno);
                 break;
             }
 
-            // in the future, probably should write to a file
-            worker_data.append(buffer.cbegin(), buffer.cend());
+            // in the future, probably should write to a file; or not idk
+            worker_data.append(buffer, bytes_received);
+
+            if (worker_data.find(CONNECT_MSG) == 0) {
+                worker_data.erase(0, CONNECT_MSG_LEN);
+
+                // get info about the message sender
+                char client_host[1024];
+                char client_service[20];
+                if ((status = getnameinfo((sockaddr *) &client_addr, addr_size, client_host, sizeof(client_host), client_service, sizeof(client_service), 0)) != 0) {
+                    std::cerr << "getnameinfo(): " << gai_strerror(status) << std::endl << "Skipping." << std::endl;
+                    continue;
+                }
+
+                Machine client(client_host, client_service);
+                workers.insert(client);
+
+                // send a task to the worker
+                Task t;
+                if (phase == Phase::map_phase) {
+                    for (std::pair<const Task, TaskStatus> &kv : map_task_statuses) {
+                        if (kv.second == TaskStatus::unassigned) {
+                            t = kv.first;
+                            break;
+                        }
+                    }
+                    if (!t.empty()) {
+                        map_task_statuses[t] = TaskStatus::in_progress;
+                        map_task_assignments[t] = client;
+                    }
+                } else if (phase == Phase::reduce_phase) {
+                    for (std::pair<const Task, TaskStatus> &kv : reduce_task_statuses) {
+                        if (kv.second == TaskStatus::unassigned) {
+                            t = kv.first;
+                            break;
+                        }
+                    }
+                    if (!t.empty()) {
+                        reduce_task_statuses[t] = TaskStatus::in_progress;
+                        reduce_task_assignments[t] = client;
+                    }
+                } else {
+                    // this should never happen; remove this code after confident
+                    std::cerr << "should never happen: new connection after reduce done";
+                }
+                // send the task file over
+                if (!t.empty()) {
+                    std::ifstream task_file(t);
+                    
+                }
+            }
         } while (bytes_received > 0);
-
-        char client_host[1024];
-        char client_service[20];
-        if ((status = getnameinfo((sockaddr *) &client_addr, addr_size, client_host, sizeof(client_host), client_service, sizeof(client_service), 0)) != 0) {
-            std::cerr << "getnameinfo(): " << gai_strerror(status) << std::endl << "Skipping." << std::endl;
-            continue;
-        }
-
-        if (worker_data == CONNECT_MSG) {
-            Machine client(client_host, client_service);
-            workers.insert(client);
-
-            // send a task to the worker
-            Task t;
-            if (phase == Phase::map_phase) {
-                for (std::pair<const Task, TaskStatus> &kv : map_task_statuses) {
-                    if (kv.second == TaskStatus::unassigned) {
-                        t = kv.first;
-                        break;
-                    }
-                }
-                if (!t.empty()) {
-                    map_task_statuses[t] = TaskStatus::in_progress;
-                    map_task_assignments[t] = client;
-                }
-            } else if (phase == Phase::reduce_phase) {
-                for (std::pair<const Task, TaskStatus> &kv : reduce_task_statuses) {
-                    if (kv.second == TaskStatus::unassigned) {
-                        t = kv.first;
-                        break;
-                    }
-                }
-                if (!t.empty()) {
-                    reduce_task_statuses[t] = TaskStatus::in_progress;
-                    reduce_task_assignments[t] = client;
-                }
-            } else {
-                // this should never happen; remove this code after confident
-                std::cerr << "should never happen: new connection after reduce done";
-            }
-            // send the task file over
-            if (!t.empty()) {
-                std::ifstream task_file(t);
-                
-            }
-            
-        }
         
         close(client_fd);
     }

@@ -48,31 +48,34 @@ int client(std::string server_ip, std::string server_port) {
 
     freeaddrinfo(servinfo);
 
-    // begin sending data or smth
+    // Tell the server that we connected for the first time.
+    int total_sent = 0;
     int bytes_sent;
-    if ((bytes_sent = send(sockfd, CONNECT_MSG, CONNECT_MSG_LEN, 0)) == -1) {
-        std::cerr << "send(): " << strerror(errno) << std::endl;
-        close(sockfd);
-        freeaddrinfo(servinfo);
-        return 1;
-    }
-    // end send data
+    do {
+        if ((bytes_sent = send(sockfd, CONNECT_MSG, CONNECT_MSG_LEN, 0)) == -1) {
+            std::cerr << "send(): " << strerror(errno) << std::endl;
+            close(sockfd);
+            freeaddrinfo(servinfo);
+            return 1;
+        }
+    } while (total_sent < CONNECT_MSG_LEN);
 
     // wait for tasks/commands from the master and then execute them
     while (true) {
         std::string master_data;
-        std::vector<char> buffer;
+        constexpr int BUFFER_SIZE = 4096;
+        char buffer[BUFFER_SIZE];
         int bytes_received;
         do {
-            if ((bytes_received = recv(sockfd, &buffer[0], buffer.size(), 0)) == -1) {
+            if ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0)) == -1) {
                 std::cerr << "recv(): " << strerror(errno);
                 break;
             }
 
             // in the future, probably should write to a file
-            master_data.append(buffer.cbegin(), buffer.cend());
+            master_data.append(buffer, BUFFER_SIZE);
         } while (bytes_received > 0);
-        
+
     }
 
     close(sockfd);
