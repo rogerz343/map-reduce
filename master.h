@@ -28,9 +28,10 @@
 class Master {
 private:
     static const int QUEUE_LENGTH = 10;
-    static const int BUFFER_SIZE = 4096;
-    char buffer[BUFFER_SIZE];
-    // std::vector<char> buffer;
+    static const int RECV_BUFFER_SIZE = 4096;
+    char recv_buffer[RECV_BUFFER_SIZE];
+    // static const int SEND_BUFFER_SIZE = 4096;
+    // char send_buffer[SEND_BUFFER_SIZE];
 
     const std::string master_name;
     const std::string server_port;

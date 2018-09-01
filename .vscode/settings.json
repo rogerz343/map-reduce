@@ -34,6 +34,7 @@
         "utility": "cpp",
         "set": "cpp",
         "unordered_set": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "cerrno": "cpp"
     }
 }
