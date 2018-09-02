@@ -1,4 +1,6 @@
-test_master: master.o machine.o definitions.h
+test: test_master run_worker
+
+test_master: master.o machine.o definitions.h test_master.cpp
 	g++ -std=c++14 -Wall -o test_master test_master.cpp ./master.o ./machine.o
 
 master.o: master.h master.cpp machine.o definitions.h 
@@ -23,3 +25,5 @@ clean:
 	rm -f reducetask
 	rm -f run_worker
 	rm -f test_master
+	rm -f map_in_splits/*
+	rm -f map_out/*

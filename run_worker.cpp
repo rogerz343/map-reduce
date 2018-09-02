@@ -48,7 +48,8 @@ int client(std::string server_ip, std::string server_port, std::string executabl
         return 1;
     }
 
-    freeaddrinfo(servinfo);
+    // Leave this commented out. We need servinfo later.
+    // freeaddrinfo(servinfo);
 
     // Tell the server that we connected for the first time.
     int total_sent = 0;
@@ -60,6 +61,7 @@ int client(std::string server_ip, std::string server_port, std::string executabl
             freeaddrinfo(servinfo);
             return 1;
         }
+        total_sent += bytes_sent;
     } while (total_sent < CONNECT_MSG_LEN);
 
     std::cout << "sent initial connect message to server." << std::endl;
@@ -81,6 +83,8 @@ int client(std::string server_ip, std::string server_port, std::string executabl
 
     close(sockfd);
 
+    std::cout << "received task from master." << std::endl;
+
     // in a loop: complete the task, tell the server that the task is completed,
     // get a new task
     do {
@@ -95,9 +99,12 @@ int client(std::string server_ip, std::string server_port, std::string executabl
                 wait(&status);
             } else {
                 // this is the child process
-                execl(executable.c_str(), kv_filename.c_str());
+                execl(executable.c_str(), executable.c_str(), kv_filename.c_str(), (char *) NULL);
+                std::cout << "uh oh." << std::endl;
             }
         }
+
+        std::cout << "current task completed." << std::endl;
 
         // connect to server again to say that task is finished
         for (p = servinfo; p != nullptr; p = p->ai_next) {
@@ -128,32 +135,11 @@ int client(std::string server_ip, std::string server_port, std::string executabl
                 freeaddrinfo(servinfo);
                 return 1;
             }
+            total_sent += bytes_sent;
         } while (total_sent < FIN_TASK_MSG_LEN);
+
+        break;
     } while (true);
-
-    // in a loop, wait for more tasks and execute them
-    while (true) {
-        // connect to server again
-        for (p = servinfo; p != nullptr; p = p->ai_next) {
-            if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-                std::cerr << "socket(): " << strerror(errno) << std::endl;
-                continue;
-            }
-
-            if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-                close(sockfd);
-                std::cerr << "connect(): " << strerror(errno) << std::endl;
-                continue;
-            }
-
-            break;
-        }
-
-        if (p == nullptr) {
-            std::cerr << "err: failed to connect" << std::endl;
-            return 1;
-        }
-    }
 
     freeaddrinfo(servinfo);
     return 0;
@@ -161,6 +147,5 @@ int client(std::string server_ip, std::string server_port, std::string executabl
 
 int main(int argc, char* argv[]) {
     // TODO: add parameters
-
-    client("127.0.0.1", "8000", "maptask");
+    client("127.0.0.1", "8000", "./maptask");
 }

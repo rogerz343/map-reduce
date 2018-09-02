@@ -5,15 +5,12 @@
  * function, and compile to create an executable. The name of this executable
  * should be "maptask".
  * 
- * The input data is read from the file "[taskname].mtin" (where [taskname] is
- * the name of the task, and this file is assumed to exist). Each line of the
- * input file should be a key-value pair, with each pair delimited by
- * DELIMITER_INLINE and each line delimited by DELIMITER_NEWLINE (as opposed to
- * '\n'); these constants are defined in "definitions.h".
+ * The input file is a key value pair. The key is the name of the file that is
+ * given as an argument to this executable, and the value is the contents of
+ * that file.
  * 
- * The output data is stored in the file "[taskname].mtout". Each line of the
- * output file is a key-value pair, with each pair delimited by DELIMITER_INLINE
- * and each line delimited by DELIMITER_NEWLINE.
+ * The output file is a key value pair. The key is the name of the file and the
+ * value is the contents of that file.
  */
 
 #include <fstream>
@@ -23,7 +20,7 @@
 #include "definitions.h"
 
 // ATTENTION: rewrite this function for your intended task.
-std::vector<std::pair<std::string, std::string>> map_func(std::pair<std::string, std::string> input) {
+std::vector<std::pair<std::string, std::string>> map_func(std::pair<std::string, std::string> &input) {
     std::vector<std::pair<std::string, std::string>> res;
     std::string &text = input.second;
     std::string token;
@@ -44,34 +41,47 @@ std::vector<std::pair<std::string, std::string>> map_func(std::pair<std::string,
     return res;
 }
 
-// returns 0 on success, 1 on failure
-int run_task(std::string taskname) {
-    std::ifstream input_file(taskname + ".mtin");
-    if (!input_file.is_open()) { return 1; }
-    std::ofstream output_file(taskname + ".mtout", std::ios::trunc);
-    if (!output_file.is_open()) { return 1; }
+/* returns file name without its directory path */
+std::string basename(const std::string &filepath) {
+    size_t last_slash = filepath.find_last_of('/');
+    if (last_slash != std::string::npos) {
+        return filepath.substr(last_slash + 1);
+    }
+    return filepath;
+}
 
-    std::string line;
-    while (std::getline(input_file, line, DELIMITER_NEWLINE)) {
-        int delim_idx = line.find(DELIMITER_INLINE);
-        std::pair<std::string, std::string> kv_in(line.substr(0, delim_idx), line.substr(delim_idx + 1));
-        std::vector<std::pair<std::string, std::string>> output = map_func(kv_in);
-        for (std::pair<std::string, std::string> &kv_out : output) {
-            output_file << kv_out.first << DELIMITER_INLINE << kv_out.second << DELIMITER_NEWLINE;
-        }
+// returns 0 on success, 1 on failure
+int run_task(std::string kv_file) {
+    std::ifstream input_file(kv_file);
+    if (!input_file.is_open()) { return 1; }
+
+    std::string filename = basename(kv_file);
+    std::string file_text;
+    file_text.assign(std::istreambuf_iterator<char>(input_file),
+                     std::istreambuf_iterator<char>());
+
+    std::pair<std::string, std::string> kv_in = std::make_pair(filename, file_text);
+    std::vector<std::pair<std::string, std::string>> output = map_func(kv_in);
+    for (std::pair<std::string, std::string> &kv_out : output) {
+        std::ofstream output_file(map_out + kv_out.first, std::ios::trunc);
+        if (!output_file.is_open()) { return 1; }
+
+        output_file << kv_out.second;
+        output_file.close();
     }
 
     input_file.close();
-    output_file.close();
     return 0;
+
+    // TODO: OUTPUT KEY CANNOT BE FILE NAME OR ELSE YOU WILL OVERRIDE
+    // PREVIOUS FILES WITH THE SAME KEY
 }
 
 /**
- * First command line argument is the name of this executable.
- * Second command line argument is the name of the task.
+ * 1st command line argument is the name of the file to work on.
  * Returns 0 on success, 1 on failure.
  */
-int main(int argc, char *argv[]) {
-    std::string taskname = argv[1];
-    return run_task(taskname);
+int main(int argc, char* argv[]) {
+    std::string kv_file(argv[1]);
+    return run_task(kv_file);
 }

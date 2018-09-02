@@ -86,6 +86,8 @@ int Master::start_server() {
             continue;
         }
 
+        std::cout << "connected to a client." << std::endl;
+
         // read bytes and communicate back and forth until client closes connection
         bool errorflag = false;
         bool done = false;
@@ -143,17 +145,19 @@ int Master::start_server() {
                     // this should never happen; remove this code after confident
                     std::cerr << "should never happen: new connection after reduce done";
                 }
+
                 // send the task file over
                 if (!t.empty()) {
                     size_t total_sent = 0;
                     int bytes_sent;
                     do {
-                        if ((bytes_sent = send(sockfd, t.c_str(), t.length(), 0)) == -1) {
+                        if ((bytes_sent = send(client_fd, t.c_str(), t.length(), 0)) == -1) {
                             std::cerr << "send(): " << strerror(errno) << std::endl;
                             close(sockfd);
                             freeaddrinfo(servinfo);
                             return 1;
                         }
+                        total_sent += bytes_sent;
                     } while (total_sent < t.length());
                 } else {
                     // TODO
@@ -186,6 +190,7 @@ int Master::start_server() {
 
         } while (!errorflag && !done && bytes_received > 0);
 
+        std::cout << "closing connection to client." << std::endl;
         close(client_fd);
     }
 
