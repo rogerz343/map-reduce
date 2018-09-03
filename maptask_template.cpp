@@ -9,8 +9,10 @@
  * given as an argument to this executable, and the value is the contents of
  * that file.
  * 
- * The output file is a key value pair. The key is the name of the file and the
- * value is the contents of that file.
+ * The output file is a key value pair. The name of the file is relatively
+ * arbitrary (but guaranteed to be unique). The key is the first line of the
+ * file and the value is the rest of the contents. These lines are delimited by
+ * DELIMITER_NEWLINE (as opposed to \n).
  */
 
 #include <fstream>
@@ -62,19 +64,19 @@ int run_task(std::string kv_file) {
 
     std::pair<std::string, std::string> kv_in = std::make_pair(filename, file_text);
     std::vector<std::pair<std::string, std::string>> output = map_func(kv_in);
+    int id = 0;     // used to make output filenames unique
     for (std::pair<std::string, std::string> &kv_out : output) {
-        std::ofstream output_file(map_out + kv_out.first, std::ios::trunc);
+        std::ofstream output_file(map_out + filename + "_" + std::to_string(id), std::ios::trunc);
         if (!output_file.is_open()) { return 1; }
 
+        output_file << kv_out.first;
+        output_file << DELIMITER_NEWLINE;
         output_file << kv_out.second;
         output_file.close();
     }
 
     input_file.close();
     return 0;
-
-    // TODO: OUTPUT KEY CANNOT BE FILE NAME OR ELSE YOU WILL OVERRIDE
-    // PREVIOUS FILES WITH THE SAME KEY
 }
 
 /**

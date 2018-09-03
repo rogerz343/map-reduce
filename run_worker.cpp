@@ -100,7 +100,6 @@ int client(std::string server_ip, std::string server_port, std::string executabl
             } else {
                 // this is the child process
                 execl(executable.c_str(), executable.c_str(), kv_filename.c_str(), (char *) NULL);
-                std::cout << "uh oh." << std::endl;
             }
         }
 
