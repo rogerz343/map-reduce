@@ -20,3 +20,11 @@ bool Machine::operator<(const Machine &right) const {
     if (hostname == right.hostname) { return port < right.port; }
     return hostname < right.hostname;
 }
+
+bool Machine::operator==(const Machine &right) const {
+    return hostname == right.hostname && port == right.port;
+}
+
+bool Machine::operator!=(const Machine &right) const {
+    return !(*this == right);
+}

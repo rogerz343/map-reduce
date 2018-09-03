@@ -15,6 +15,8 @@ public:
     Machine(const Machine &right);
     Machine operator=(const Machine &right);
     bool operator<(const Machine &right) const;
+    bool operator==(const Machine &right) const;
+    bool operator!=(const Machine &right) const;
 };
 
 #endif

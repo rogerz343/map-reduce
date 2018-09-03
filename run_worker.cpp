@@ -89,6 +89,7 @@ int client(std::string server_ip, std::string server_port, std::string executabl
     // get a new task
     do {
         // complete the current task
+        Task curr_task(master_data);
         std::ifstream task_file(master_data);
         std::string kv_filename;
         while (std::getline(task_file, kv_filename)) {
@@ -126,6 +127,7 @@ int client(std::string server_ip, std::string server_port, std::string executabl
             return 1;
         }
 
+        // Tell the server that the task is finished.
         total_sent = 0;
         do {
             if ((bytes_sent = send(sockfd, FIN_TASK_MSG, FIN_TASK_MSG_LEN, 0)) == -1) {
@@ -137,7 +139,10 @@ int client(std::string server_ip, std::string server_port, std::string executabl
             total_sent += bytes_sent;
         } while (total_sent < FIN_TASK_MSG_LEN);
 
-        break;
+        // get a new task from the server (or the message that everything is
+        // done)
+
+        /* TODO */
     } while (true);
 
     freeaddrinfo(servinfo);

@@ -73,6 +73,7 @@ int run_task(std::string kv_file) {
         output_file << DELIMITER_NEWLINE;
         output_file << kv_out.second;
         output_file.close();
+        ++id;
     }
 
     input_file.close();

@@ -129,6 +129,7 @@ int Master::start_server() {
                     if (!t.empty()) {
                         map_task_statuses[t] = TaskStatus::in_progress;
                         map_task_assignments[t] = client;
+                        map_machine_assignments[client] = t;
                     }
                 } else if (phase == Phase::reduce_phase) {
                     for (std::pair<const Task, TaskStatus> &kv : reduce_task_statuses) {
@@ -181,8 +182,13 @@ int Master::start_server() {
                     continue;
                 }
 
-                // Machine client(client_host, client_service);
-                // workers.insert(client);
+                Machine client(client_host, client_service);
+                Task finished_task = map_machine_assignments[client];
+                map_task_statuses[finished_task] = TaskStatus::finished;
+                map_task_assignments.erase(finished_task);
+                map_machine_assignments.erase(client);
+
+                // TODO: YOU WERE HERE
 
                 // TODO:
                 // do stuff with the finished map or reduce task
