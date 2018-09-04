@@ -116,7 +116,7 @@ int Master::start_server() {
                 }
 
                 Machine client(client_host, client_service);
-                workers.insert(client);
+                workers[client] = MachineStatus::idle;
 
                 // Pick an unassigned task (filepath/name) to send to the worker
                 Task t = assign_task(client);
@@ -171,10 +171,10 @@ int Master::start_server() {
                     // No tasks found; current phase is done.
                     if (phase == Phase::map_phase) {
                         phase = Phase::intermediate_phase;
-                    } else if (phase == Phase::intermediate_phase) {
-                        // TODO: idk
+                        group_keys();
+                        phase = Phase::reduce_phase;
                     } else if (phase == Phase::reduce_phase) {
-                        phase == Phase::finished_phase;
+                        phase = Phase::finished_phase;
                     }
                 }
 
@@ -239,21 +239,40 @@ bool Master::send_to_client(int client_fd, std::string msg) {
     return true;
 }
 
-bool group_keys() {
+bool Master::group_keys() {
+    std::unordered_map<std::string, std::vector<std::string>> intermediate_keys;
+
     DIR *map_out_dir;
     struct dirent *file;
     if ((map_out_dir = opendir(map_out)) != NULL) {
         while ((file = readdir(map_out_dir)) != NULL) {
-            if (file->d_name == "." || file->d_name == "..") { continue; }
             std::string filename = file->d_name;
+            if (filename == "." || filename == "..") { continue; }
+            std::ifstream kv_file(filename);
+            std::string key;
+            std::getline(kv_file, key, DELIMITER_NEWLINE);
+            kv_file.close();
 
-            // TODO: group the keys together
+            if (intermediate_keys.find(key) == intermediate_keys.end()) {
+                intermediate_keys[key] = std::vector<std::string>();
+            }
+            intermediate_keys[key].push_back(filename);
         }
         closedir(map_out_dir);
+
+        for (auto &entry : intermediate_keys) {
+            std::ofstream output_file(key_groups + entry.first, std::ios::trunc);
+            if (!output_file.is_open()) { return false; }
+
+            std::vector<std::string> &vals = entry.second;
+            for (const std::string &val : vals) {
+                output_file << val << std::endl;
+            }
+            output_file.close();
+        }
         return 1;
     } else {
-        std::cout << "hmMMmMmmMmMMMMM" << std::endl;
-        // perror ("");
+        std::cout << "group_keys(): fatal: unable to open directory" << std::endl;
         return 1;
     }
 }

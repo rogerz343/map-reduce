@@ -8,8 +8,9 @@ int main() {
     struct dirent *ent;
     if ((dir = opendir("./ex_word_count_in")) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
-            if (ent->d_name == "." || ent->d_name == "..") { continue; }
-            input.push_back("./ex_word_count_in/" + ent->d_name);
+            std::string filename(ent->d_name);
+            if (filename == "." || filename == "..") { continue; }
+            input.push_back("./ex_word_count_in/" + std::string(ent->d_name));
         }
         closedir(dir);
         return 1;

@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <vector>
 
@@ -37,7 +38,7 @@ private:
     const std::string master_name;
     const std::string server_port;
 
-    std::set<Machine> workers;      // future implementation: handle errors
+    // std::set<Machine> workers;      // future implementation: handle errors
     std::map<Machine, MachineStatus> workers;
 
     Phase phase;
@@ -67,6 +68,14 @@ private:
      * are sent. Returns true if no errors occurred, false otherwise.
      */
     bool send_to_client(int client_fd, std::string msg);
+
+    /**
+     * Call this function once map phase has finished. This function iterates through all outputs of
+     * the map phase and groups together the files that have the same key. The files are saved in
+     * key_groups (see definition.h). The filenames are the keys and each line in each file is the
+     * name of a file in map_out (see definition.h) which has that key.
+     */
+    bool group_keys();
 public:
     Master(std::string master_name,
             std::string server_port,

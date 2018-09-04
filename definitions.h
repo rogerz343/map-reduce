@@ -10,8 +10,9 @@ typedef std::string Task;
 // location of each split of the map function inputs
 constexpr char map_in_splits[] = "./map_in_splits/";
 constexpr char map_out[] = "./map_out/";
+constexpr char key_groups[] = "./intermediate_out/";
 constexpr char red_in_splits[] = "./red_in_splits/";
-constexpr char red_out_splits[] = "./red_out_splits/";
+constexpr char red_out[] = "./red_out/";
 
 
 enum class TaskType { none, map_task, reduce_task };

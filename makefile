@@ -26,4 +26,8 @@ clean:
 	rm -f run_worker
 	rm -f test_master
 	rm -f map_in_splits/*
+	touch map_in_splits/placeholder.txt
 	rm -f map_out/*
+	touch map_out/placeholder.txt
+	rm -f red_out/*
+	touch red_out/placeholder.txt
