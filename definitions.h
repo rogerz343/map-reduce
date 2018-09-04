@@ -16,7 +16,7 @@ constexpr char red_out_splits[] = "./red_out_splits/";
 
 enum class TaskType { none, map_task, reduce_task };
 enum class TaskStatus { unassigned, in_progress, finished };
-enum class MachineStatus { available, in_progress, finished, failed };
+enum class MachineStatus { idle, in_progress, finished, failed };
 enum class Phase { map_phase, intermediate_phase, reduce_phase, finished_phase };
 
 constexpr char CONNECT_MSG[] = "###connected###";

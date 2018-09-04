@@ -35,6 +35,7 @@
         "set": "cpp",
         "unordered_set": "cpp",
         "functional": "cpp",
-        "cerrno": "cpp"
+        "cerrno": "cpp",
+        "filesystem": "cpp"
     }
 }

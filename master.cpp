@@ -80,7 +80,7 @@ int Master::start_server() {
     struct sockaddr_storage client_addr;
     socklen_t addr_size = sizeof(client_addr);
     int client_fd;
-    while (true) {
+    while (phase != Phase::finished_phase) {
         if ((client_fd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size)) == -1) {
             std::cerr << "accept(): " << strerror(errno) << std::endl << "Skipping." << std::endl;
             continue;
@@ -90,7 +90,7 @@ int Master::start_server() {
 
         // read bytes and communicate back and forth until client closes connection
         bool errorflag = false;
-        bool done = false;
+        bool done_with_client = false;
         std::string worker_data;
         int bytes_received;
         do {
@@ -102,6 +102,7 @@ int Master::start_server() {
             // in the future, probably should write to a file; or not idk
             worker_data.append(recv_buffer, bytes_received);
 
+            // New worker connected: assign it a task.
             if (worker_data.find(CONNECT_MSG) == 0) {
                 worker_data.erase(0, CONNECT_MSG_LEN);
 
@@ -117,59 +118,26 @@ int Master::start_server() {
                 Machine client(client_host, client_service);
                 workers.insert(client);
 
-                // Pick an unassigned task (file) to send to the worker
-                Task t;
-                if (phase == Phase::map_phase) {
-                    for (std::pair<const Task, TaskStatus> &kv : map_task_statuses) {
-                        if (kv.second == TaskStatus::unassigned) {
-                            t = kv.first;
-                            break;
-                        }
-                    }
-                    if (!t.empty()) {
-                        map_task_statuses[t] = TaskStatus::in_progress;
-                        map_task_assignments[t] = client;
-                        map_machine_assignments[client] = t;
-                    }
-                } else if (phase == Phase::reduce_phase) {
-                    for (std::pair<const Task, TaskStatus> &kv : reduce_task_statuses) {
-                        if (kv.second == TaskStatus::unassigned) {
-                            t = kv.first;
-                            break;
-                        }
-                    }
-                    if (!t.empty()) {
-                        reduce_task_statuses[t] = TaskStatus::in_progress;
-                        reduce_task_assignments[t] = client;
-                    }
-                } else {
-                    // this should never happen; remove this code after confident
-                    std::cerr << "should never happen: new connection after reduce done";
-                }
+                // Pick an unassigned task (filepath/name) to send to the worker
+                Task t = assign_task(client);
 
                 // send the task file over
                 if (!t.empty()) {
-                    size_t total_sent = 0;
-                    int bytes_sent;
-                    do {
-                        if ((bytes_sent = send(client_fd, t.c_str(), t.length(), 0)) == -1) {
-                            std::cerr << "send(): " << strerror(errno) << std::endl;
-                            close(sockfd);
-                            freeaddrinfo(servinfo);
-                            return 1;
-                        }
-                        total_sent += bytes_sent;
-                    } while (total_sent < t.length());
+                    if (!send_to_client(client_fd, t)) {
+                        close(client_fd);
+                        freeaddrinfo(servinfo);
+                        return 1;
+                    }
+                    std::cout << "sent task to worker." << std::endl;
                 } else {
-                    // TODO
-                    // no tasks found; this should never happen (maybe?)
+                    // no tasks found.
+                    // TODO: idk what to do
                 }
-
-                std::cout << "sent task to worker." << std::endl;
-                done = true;
+                done_with_client = true;
                 close(client_fd);
             }
 
+            // Worker has finished task. Record this and give the worker a new task (if applicable).
             if (worker_data.find(FIN_TASK_MSG) == 0) {
                 worker_data.erase(0, FIN_TASK_MSG_LEN);
 
@@ -182,19 +150,39 @@ int Master::start_server() {
                     continue;
                 }
 
+                // Record task as being finished
                 Machine client(client_host, client_service);
                 Task finished_task = map_machine_assignments[client];
                 map_task_statuses[finished_task] = TaskStatus::finished;
                 map_task_assignments.erase(finished_task);
                 map_machine_assignments.erase(client);
 
-                // TODO: YOU WERE HERE
+                // Find a new task to assign to worker.
+                Task t = assign_task(client);
 
-                // TODO:
-                // do stuff with the finished map or reduce task
+                // Send the new task to the worker.
+                if (!t.empty()) {
+                    if (!send_to_client(client_fd, t)) {
+                        close(client_fd);
+                        freeaddrinfo(servinfo);
+                        return 1;
+                    }
+                } else {
+                    // No tasks found; current phase is done.
+                    if (phase == Phase::map_phase) {
+                        phase = Phase::intermediate_phase;
+                    } else if (phase == Phase::intermediate_phase) {
+                        // TODO: idk
+                    } else if (phase == Phase::reduce_phase) {
+                        phase == Phase::finished_phase;
+                    }
+                }
+
+                done_with_client = true;
+                close(client_fd);
             }
 
-        } while (!errorflag && !done && bytes_received > 0);
+        } while (!errorflag && !done_with_client && bytes_received > 0);
 
         std::cout << "closing connection to client." << std::endl;
         close(client_fd);
@@ -203,4 +191,69 @@ int Master::start_server() {
     close(sockfd);
     freeaddrinfo(servinfo);
     return 0;
+}
+
+Task Master::assign_task(const Machine &client) {
+    Task t;
+    if (phase == Phase::map_phase) {
+        for (std::pair<const Task, TaskStatus> &kv : map_task_statuses) {
+            if (kv.second == TaskStatus::unassigned) {
+                t = kv.first;
+                break;
+            }
+        }
+        if (!t.empty()) {
+            map_task_statuses[t] = TaskStatus::in_progress;
+            map_task_assignments[t] = client;
+            map_machine_assignments[client] = t;
+        }
+    } else if (phase == Phase::reduce_phase) {
+        for (std::pair<const Task, TaskStatus> &kv : reduce_task_statuses) {
+            if (kv.second == TaskStatus::unassigned) {
+                t = kv.first;
+                break;
+            }
+        }
+        if (!t.empty()) {
+            reduce_task_statuses[t] = TaskStatus::in_progress;
+            reduce_task_assignments[t] = client;
+            reduce_machine_assignments[client] = t;
+        }
+    } else {
+        // this should never happen; remove this code after confident
+        std::cerr << "should never happen: new connection after reduce done";
+    }
+    return t;
+}
+
+bool Master::send_to_client(int client_fd, std::string msg) {
+    size_t total_sent = 0;
+    int bytes_sent;
+    do {
+        if ((bytes_sent = send(client_fd, msg.c_str(), msg.length(), 0)) == -1) {
+            std::cerr << "send(): " << strerror(errno) << std::endl;
+            return false;
+        }
+        total_sent += bytes_sent;
+    } while (total_sent < msg.length());
+    return true;
+}
+
+bool group_keys() {
+    DIR *map_out_dir;
+    struct dirent *file;
+    if ((map_out_dir = opendir(map_out)) != NULL) {
+        while ((file = readdir(map_out_dir)) != NULL) {
+            if (file->d_name == "." || file->d_name == "..") { continue; }
+            std::string filename = file->d_name;
+
+            // TODO: group the keys together
+        }
+        closedir(map_out_dir);
+        return 1;
+    } else {
+        std::cout << "hmMMmMmmMmMMMMM" << std::endl;
+        // perror ("");
+        return 1;
+    }
 }
