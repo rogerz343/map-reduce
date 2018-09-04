@@ -25,9 +25,11 @@ clean:
 	rm -f reducetask
 	rm -f run_worker
 	rm -f test_master
-	rm -f map_in_splits/*
+
+	# can't use "rm -f" because too many files to remove
+	# find ./map_in_splits/ -name "*" -print0 | xargs -0 rm
 	touch map_in_splits/placeholder.txt
-	rm -f map_out/*
+	# find ./map_out/ -name "*" -print0 | xargs -0 rm
 	touch map_out/placeholder.txt
-	rm -f red_out/*
+	# find ./red_out/ -name "*" -print0 | xargs -0 rm
 	touch red_out/placeholder.txt

@@ -106,6 +106,8 @@ int Master::start_server() {
             if (worker_data.find(CONNECT_MSG) == 0) {
                 worker_data.erase(0, CONNECT_MSG_LEN);
 
+                std::cout << "New worker has connected." << std::endl;
+
                 // get info about the message sender
                 char client_host[1024];
                 char client_service[20];
@@ -141,6 +143,8 @@ int Master::start_server() {
             if (worker_data.find(FIN_TASK_MSG) == 0) {
                 worker_data.erase(0, FIN_TASK_MSG_LEN);
 
+                std::cout << "Worker has finished a task." << std::endl;
+
                 // get info about the message sender
                 char client_host[1024];
                 char client_service[20];
@@ -169,6 +173,7 @@ int Master::start_server() {
                     }
                 } else {
                     // No tasks found; current phase is done.
+                    std::cout << "All current tasks completed. Moving to next phase." << std::endl;
                     if (phase == Phase::map_phase) {
                         phase = Phase::intermediate_phase;
                         group_keys();
@@ -240,6 +245,8 @@ bool Master::send_to_client(int client_fd, std::string msg) {
 }
 
 bool Master::group_keys() {
+    std::cout << "group_keys() called." << std::endl;
+
     std::unordered_map<std::string, std::vector<std::string>> intermediate_keys;
 
     DIR *map_out_dir;
@@ -247,11 +254,13 @@ bool Master::group_keys() {
     if ((map_out_dir = opendir(map_out)) != NULL) {
         while ((file = readdir(map_out_dir)) != NULL) {
             std::string filename = file->d_name;
-            if (filename == "." || filename == "..") { continue; }
+            if (filename == "." || filename == ".." || filename ==  "placeholder.txt") { continue; }
             std::ifstream kv_file(filename);
             std::string key;
             std::getline(kv_file, key, DELIMITER_NEWLINE);
             kv_file.close();
+
+            // TODO: THIS FUNCTION IS BROKEN
 
             if (intermediate_keys.find(key) == intermediate_keys.end()) {
                 intermediate_keys[key] = std::vector<std::string>();
@@ -261,8 +270,9 @@ bool Master::group_keys() {
         closedir(map_out_dir);
 
         for (auto &entry : intermediate_keys) {
+            std::cout << entry.first << std::endl;
             std::ofstream output_file(key_groups + entry.first, std::ios::trunc);
-            if (!output_file.is_open()) { return false; }
+            if (!output_file.is_open()) { std::cout << "FOEIWF" << std::endl; return false; }
 
             std::vector<std::string> &vals = entry.second;
             for (const std::string &val : vals) {
@@ -270,9 +280,10 @@ bool Master::group_keys() {
             }
             output_file.close();
         }
-        return 1;
+        std::cout << "group_keys() ran successfully." << std::endl;
+        return true;
     } else {
         std::cout << "group_keys(): fatal: unable to open directory" << std::endl;
-        return 1;
+        return false;
     }
 }

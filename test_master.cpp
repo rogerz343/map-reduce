@@ -13,7 +13,6 @@ int main() {
             input.push_back("./ex_word_count_in/" + std::string(ent->d_name));
         }
         closedir(dir);
-        return 1;
     } else {
         std::cout << "hmMMmMmmMmMMMMM" << std::endl;
         // perror ("");
