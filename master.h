@@ -74,8 +74,16 @@ private:
      * the map phase and groups together the files that have the same key. The files are saved in
      * key_groups (see definition.h). The filenames are the keys and each line in each file is the
      * name of a file in map_out (see definition.h) which has that key.
+     * 
+     * Returns true on success, false otherwise.
      */
     bool group_keys();
+
+    /**
+     * Starts the reduce phase by populating reduce_task_statuses.
+     * Returns true on success, false otherwise.
+     */
+    bool start_reduce_phase();
 public:
     Master(std::string master_name,
             std::string server_port,

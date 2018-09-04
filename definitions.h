@@ -29,7 +29,7 @@ constexpr int NEW_TASK_MSG_LEN = 19;
 constexpr char FIN_TASK_MSG[] = "###finished_task###";
 constexpr int FIN_TASK_MSG_LEN = 19;
 
-constexpr char DELIMITER_NEWLINE = '\037';
+constexpr char DELIMITER_NEWLINE = '|'; // '\037';
 constexpr char DELIMITER_INLINE = '^';
 
 #endif

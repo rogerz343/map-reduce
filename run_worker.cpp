@@ -103,6 +103,7 @@ int client(std::string server_ip, std::string server_port, std::string executabl
                 execl(executable.c_str(), executable.c_str(), kv_filename.c_str(), (char *) NULL);
             }
         }
+        task_file.close();
 
         std::cout << "current task completed." << std::endl;
 
@@ -139,8 +140,23 @@ int client(std::string server_ip, std::string server_port, std::string executabl
             total_sent += bytes_sent;
         } while (total_sent < FIN_TASK_MSG_LEN);
 
-        // get a new task from the server (or the message that everything is
-        // done)
+        return 0; // for testing; delete this later
+        // TODO: finish below
+
+        // // get a new task from the server (or the message that everything is
+        // // done)
+
+        // do {
+        //     if ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0)) == -1) {
+        //         std::cerr << "recv(): " << strerror(errno);
+        //         break;
+        //     }
+
+        //     // master_data contains the task name at this point
+        //     master_data.append(buffer, BUFFER_SIZE);
+        // } while (bytes_received > 0);
+
+        // close(sockfd);
 
         /* TODO */
     } while (true);

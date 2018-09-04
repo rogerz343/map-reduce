@@ -53,6 +53,7 @@ int run_task(std::string kvs_file) {
         std::getline(kv_file, value);   // ignore the first line (the key, which we already know)
         std::getline(kv_file, value);
         red_func_value.push_back(value);    // copy by value slow; please change this later
+        kv_file.close();
     }
     input_file.close();
 
