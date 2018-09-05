@@ -83,7 +83,7 @@ private:
      * Starts the reduce phase by populating reduce_task_statuses.
      * Returns true on success, false otherwise.
      */
-    bool start_reduce_phase();
+    // bool start_reduce_phase();
 public:
     Master(std::string master_name,
             std::string server_port,
