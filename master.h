@@ -43,12 +43,14 @@ private:
 
     Phase phase;
 
+    // TODO: invert this map
     std::map<Task, TaskStatus> map_task_statuses;
 
     // map_task_assignments and map_machine_assignments form a 1-to-1 map
     std::map<Task, Machine> map_task_assignments;
     std::map<Machine, Task> map_machine_assignments;
 
+    // TODO: invert this map
     std::map<Task, TaskStatus> reduce_task_statuses;
 
     // reduce_task_assignments and reduce_machine_assignments form a 1-to-1 map
@@ -83,7 +85,7 @@ private:
      * Starts the reduce phase by populating reduce_task_statuses.
      * Returns true on success, false otherwise.
      */
-    // bool start_reduce_phase();
+    bool start_reduce_phase();
 public:
     Master(std::string master_name,
             std::string server_port,

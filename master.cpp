@@ -176,6 +176,7 @@ int Master::start_server() {
                     std::cout << "All current tasks completed. Moving to next phase." << std::endl;
                     if (phase == Phase::map_phase) {
                         group_keys();
+                        start_reduce_phase();
                         phase = Phase::reduce_phase;
                     } else if (phase == Phase::reduce_phase) {
                         phase = Phase::finished_phase;
@@ -285,42 +286,24 @@ bool Master::group_keys() {
     }
 }
 
-// TODO: U WERE WORKING ON THIS; YOU LITERALLY JUST COPY PASTA THE READ-FROM-DIRECTORY
-// CODE. CHANGE IT TO READ FROM intermediate_out
-// bool Master::start_reduce_phase() {
-//     DIR *map_out_dir;
-//     struct dirent *file;
-//     if ((map_out_dir = opendir(map_out)) != NULL) {
-//         while ((file = readdir(map_out_dir)) != NULL) {
-//             std::string filename = file->d_name;
-//             if (filename == "." || filename == ".." || filename ==  "placeholder.txt") { continue; }
-//             std::string filepath = map_out + filename;
-//             std::ifstream kv_file(filepath);
-//             std::string key;
-//             std::getline(kv_file, key, DELIMITER_NEWLINE);
-//             kv_file.close();
+bool Master::start_reduce_phase() {
+    std::cout << "start_reduce_phase() called." << std::endl;
+    DIR *key_groups_dir;
+    struct dirent *file;
+    if ((key_groups_dir = opendir(key_groups)) != NULL) {
+        while ((file = readdir(key_groups_dir)) != NULL) {
+            std::string filename = file->d_name;
+            if (filename == "." || filename == ".." || filename ==  "placeholder.txt") { continue; }
+            std::string filepath = key_groups + filename;
+            std::ifstream kv_file(filepath);
 
-//             if (intermediate_keys.find(key) == intermediate_keys.end()) {
-//                 intermediate_keys[key] = std::vector<std::string>();
-//             }
-//             intermediate_keys[key].push_back(filepath);
-//         }
-//         closedir(map_out_dir);
-
-//         for (auto &entry : intermediate_keys) {
-//             std::ofstream output_file(key_groups + entry.first, std::ios::trunc);
-//             if (!output_file.is_open()) { return false; }
-
-//             std::vector<std::string> &vals = entry.second;
-//             for (const std::string &val : vals) {
-//                 output_file << val << std::endl;
-//             }
-//             output_file.close();
-//         }
-//         std::cout << "group_keys() ran successfully." << std::endl;
-//         return true;
-//     } else {
-//         std::cout << "group_keys(): fatal: unable to open directory" << std::endl;
-//         return false;
-//     }
-// }
+            std::string &key = filename;
+            reduce_task_statuses[filename] = TaskStatus::unassigned;
+        }
+        closedir(key_groups_dir);
+        return true;
+    } else {
+        std::cout << "start_reduce_phase(): fatal: unable to open directory" << std::endl;
+        return false;
+    }
+}

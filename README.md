@@ -15,3 +15,4 @@ It is up to the user to determine what each `string` represents and to parse the
 - add more error checking and failure handling
 - use (smart) pointers when copying in vectors so you don't copy by value
 - general make code more efficient
+- change wrap std::cout in a function that's only called when debug mode is on
