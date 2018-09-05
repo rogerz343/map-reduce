@@ -260,6 +260,8 @@ bool Master::group_keys() {
             std::getline(kv_file, key, DELIMITER_NEWLINE);
             kv_file.close();
 
+            // TODO: THIS FUNCTION IS BROKEN
+
             if (intermediate_keys.find(key) == intermediate_keys.end()) {
                 intermediate_keys[key] = std::vector<std::string>();
             }
@@ -268,8 +270,9 @@ bool Master::group_keys() {
         closedir(map_out_dir);
 
         for (auto &entry : intermediate_keys) {
+            std::cout << entry.first << std::endl;
             std::ofstream output_file(key_groups + entry.first, std::ios::trunc);
-            if (!output_file.is_open()) { return false; }
+            if (!output_file.is_open()) { std::cout << "FOEIWF" << std::endl; return false; }
 
             std::vector<std::string> &vals = entry.second;
             for (const std::string &val : vals) {
