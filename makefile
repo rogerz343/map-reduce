@@ -34,3 +34,6 @@ clean:
 	rm -rf ./red_out
 	mkdir red_out
 	touch red_out/placeholder.txt
+	rm -rf ./intermediate_out
+	mkdir intermediate_out
+	touch intermediate_out/placeholder.txt
