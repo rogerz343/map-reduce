@@ -260,8 +260,6 @@ bool Master::group_keys() {
             std::getline(kv_file, key, DELIMITER_NEWLINE);
             kv_file.close();
 
-            // TODO: THIS FUNCTION IS BROKEN
-
             if (intermediate_keys.find(key) == intermediate_keys.end()) {
                 intermediate_keys[key] = std::vector<std::string>();
             }
