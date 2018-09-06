@@ -18,6 +18,12 @@ Master::Master(std::string master_name,
         master_name(master_name),
         server_port(server_port),
         phase(Phase::map_phase) {
+    map_tasks[TaskStatus::unassigned] = std::unordered_set<Task>();
+    map_tasks[TaskStatus::in_progress] = std::unordered_set<Task>();
+    map_tasks[TaskStatus::finished] = std::unordered_set<Task>();
+    reduce_tasks[TaskStatus::unassigned] = std::unordered_set<Task>();
+    reduce_tasks[TaskStatus::in_progress] = std::unordered_set<Task>();
+    reduce_tasks[TaskStatus::finished] = std::unordered_set<Task>();
     int split_size = input_files.size() / num_splits;
     for (int i = 0; i < num_splits; ++i) {
         std::string split_name = map_in_splits + master_name + "_map_in_split" + std::to_string(i);
@@ -38,7 +44,7 @@ Master::Master(std::string master_name,
         }
 
         split_file.close();
-        map_task_statuses[split_name] = TaskStatus::unassigned;
+        map_tasks[TaskStatus::unassigned].insert(split_name);
     }
 }
 
@@ -157,7 +163,8 @@ int Master::start_server() {
                 // Record task as being finished
                 Machine client(client_host, client_service);
                 Task finished_task = map_machine_assignments[client];
-                map_task_statuses[finished_task] = TaskStatus::finished;
+                map_tasks[TaskStatus::in_progress].erase(finished_task);
+                map_tasks[TaskStatus::finished].insert(finished_task);
                 map_task_assignments.erase(finished_task);
                 map_machine_assignments.erase(client);
 
@@ -178,6 +185,17 @@ int Master::start_server() {
                         group_keys();
                         start_reduce_phase();
                         phase = Phase::reduce_phase;
+
+                        t = assign_task(client);
+                        if (!t.empty()) {
+                            if (!send_to_client(client_fd, t)) {
+                                close(client_fd);
+                                freeaddrinfo(servinfo);
+                                return 1;
+                            }
+                        } else {
+                            phase = Phase::finished_phase;
+                        }
                     } else if (phase == Phase::reduce_phase) {
                         phase = Phase::finished_phase;
                     }
@@ -201,26 +219,20 @@ int Master::start_server() {
 Task Master::assign_task(const Machine &client) {
     Task t;
     if (phase == Phase::map_phase) {
-        for (std::pair<const Task, TaskStatus> &kv : map_task_statuses) {
-            if (kv.second == TaskStatus::unassigned) {
-                t = kv.first;
-                break;
-            }
-        }
-        if (!t.empty()) {
-            map_task_statuses[t] = TaskStatus::in_progress;
+        std::unordered_set<Task> &unassigned = map_tasks[TaskStatus::unassigned];
+        if (!unassigned.empty()) {
+            t = *(unassigned.begin());
+            unassigned.erase(t);
+            map_tasks[TaskStatus::in_progress].insert(t);
             map_task_assignments[t] = client;
             map_machine_assignments[client] = t;
         }
     } else if (phase == Phase::reduce_phase) {
-        for (std::pair<const Task, TaskStatus> &kv : reduce_task_statuses) {
-            if (kv.second == TaskStatus::unassigned) {
-                t = kv.first;
-                break;
-            }
-        }
-        if (!t.empty()) {
-            reduce_task_statuses[t] = TaskStatus::in_progress;
+        std::unordered_set<Task> &unassigned = reduce_tasks[TaskStatus::unassigned];
+        if (!unassigned.empty()) {
+            t = *(unassigned.begin());
+            unassigned.erase(t);
+            reduce_tasks[TaskStatus::in_progress].insert(t);
             reduce_task_assignments[t] = client;
             reduce_machine_assignments[client] = t;
         }
@@ -288,6 +300,7 @@ bool Master::group_keys() {
 
 bool Master::start_reduce_phase() {
     std::cout << "start_reduce_phase() called." << std::endl;
+    std::unordered_set<Task> &unassigned = reduce_tasks[TaskStatus::unassigned];
     DIR *key_groups_dir;
     struct dirent *file;
     if ((key_groups_dir = opendir(key_groups)) != NULL) {
@@ -296,9 +309,7 @@ bool Master::start_reduce_phase() {
             if (filename == "." || filename == ".." || filename ==  "placeholder.txt") { continue; }
             std::string filepath = key_groups + filename;
             std::ifstream kv_file(filepath);
-
-            std::string &key = filename;
-            reduce_task_statuses[filename] = TaskStatus::unassigned;
+            unassigned.insert(filepath);
         }
         closedir(key_groups_dir);
         return true;

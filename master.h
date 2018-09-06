@@ -16,6 +16,7 @@
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 #include <dirent.h>
@@ -43,15 +44,13 @@ private:
 
     Phase phase;
 
-    // TODO: invert this map
-    std::map<Task, TaskStatus> map_task_statuses;
+    std::map<TaskStatus, std::unordered_set<Task>> map_tasks;
 
     // map_task_assignments and map_machine_assignments form a 1-to-1 map
     std::map<Task, Machine> map_task_assignments;
     std::map<Machine, Task> map_machine_assignments;
 
-    // TODO: invert this map
-    std::map<Task, TaskStatus> reduce_task_statuses;
+    std::map<TaskStatus, std::unordered_set<Task>> reduce_tasks;
 
     // reduce_task_assignments and reduce_machine_assignments form a 1-to-1 map
     std::map<Task, Machine> reduce_task_assignments;

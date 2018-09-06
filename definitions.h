@@ -4,7 +4,8 @@
 // Some definitions that are used throughout the program. They should
 // probably be put in more specific .h files.
 
-// A Task is defined as the input filename.
+// A Task is defined as the input filepath. This path is relative to the root
+// directory of this project.
 typedef std::string Task;
 
 // location of each split of the map function inputs

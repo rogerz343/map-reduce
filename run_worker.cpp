@@ -12,7 +12,7 @@
 
 #include "definitions.h"
 
-int client(std::string server_ip, std::string server_port, std::string executable) {
+int client(std::string server_ip, std::string server_port, std::string map_exec, std::string reduce_exec) {
     struct addrinfo hints;
     struct addrinfo *servinfo;
 
@@ -90,20 +90,31 @@ int client(std::string server_ip, std::string server_port, std::string executabl
     do {
         // complete the current task
         Task curr_task(master_data);
-        std::ifstream task_file(master_data);
+        std::ifstream task_file(curr_task);
         std::string kv_filename;
-        while (std::getline(task_file, kv_filename)) {
-            int status;
-            pid_t pid = fork();
-            if (pid != 0) {
-                // this is the parent process
-                wait(&status);
-            } else {
-                // this is the child process
-                execl(executable.c_str(), executable.c_str(), kv_filename.c_str(), (char *) NULL);
+        if (curr_task.find(map_in_splits) != std::string::npos) {
+            while (std::getline(task_file, kv_filename)) {
+                int status;
+                pid_t pid = fork();
+                if (pid != 0) {     // this is the parent process
+                    wait(&status);
+                } else {            // this is the child process
+                    execl(map_exec.c_str(), map_exec.c_str(), kv_filename.c_str(), (char *) NULL);
+                }
+            }
+        } else if (curr_task.find(key_groups) != std::string::npos) {
+            while (std::getline(task_file, kv_filename)) {
+                int status;
+                pid_t pid = fork();
+                if (pid != 0) {     // this is the parent process
+                    wait(&status);
+                } else {            // this is the child process
+                    execl(reduce_exec.c_str(), reduce_exec.c_str(), kv_filename.c_str(), (char *) NULL);
+                }
             }
         }
         task_file.close();
+        master_data.clear();
 
         std::cout << "current task completed." << std::endl;
 
@@ -140,25 +151,19 @@ int client(std::string server_ip, std::string server_port, std::string executabl
             total_sent += bytes_sent;
         } while (total_sent < FIN_TASK_MSG_LEN);
 
-        return 0; // for testing; delete this later
-        // TODO: finish below
+        // get a new task from the server (or the message that everything is done
+        std::cout << "waiting for another task from server." << std::endl;
+        do {
+            if ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0)) == -1) {
+                std::cerr << "recv(): " << strerror(errno);
+                break;
+            }
 
-        // // get a new task from the server (or the message that everything is
-        // // done)
+            // master_data contains the task name at this point
+            master_data.append(buffer, BUFFER_SIZE);
+        } while (bytes_received > 0);
 
-        // do {
-        //     if ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0)) == -1) {
-        //         std::cerr << "recv(): " << strerror(errno);
-        //         break;
-        //     }
-
-        //     // master_data contains the task name at this point
-        //     master_data.append(buffer, BUFFER_SIZE);
-        // } while (bytes_received > 0);
-
-        // close(sockfd);
-
-        /* TODO */
+        close(sockfd);
     } while (true);
 
     freeaddrinfo(servinfo);
@@ -167,5 +172,5 @@ int client(std::string server_ip, std::string server_port, std::string executabl
 
 int main(int argc, char* argv[]) {
     // TODO: add parameters
-    client("127.0.0.1", "8000", "./maptask");
+    client("127.0.0.1", "8000", "./maptask", "./reducetask");
 }
