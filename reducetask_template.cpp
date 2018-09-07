@@ -50,8 +50,8 @@ int run_task(std::string kvs_file) {
         if (!kv_file.is_open()) { return 1; }
 
         std::string value;
-        std::getline(kv_file, value);   // ignore the first line (the key, which we already know)
-        std::getline(kv_file, value);
+        std::getline(kv_file, value, DELIMITER_NEWLINE);   // ignore the first line (the key, which we already know)
+        std::getline(kv_file, value, DELIMITER_NEWLINE);
         red_func_value.push_back(value);    // copy by value slow; please change this later
         kv_file.close();
     }
@@ -60,7 +60,7 @@ int run_task(std::string kvs_file) {
     std::pair<std::string, std::vector<std::string>> red_func_in(red_func_key, red_func_value);
     std::string result = reduce_func(red_func_in);
 
-    std::ofstream output_file("red_out_" + filename, std::ios::trunc);
+    std::ofstream output_file(std::string(red_out) + "red_out_" + filename, std::ios::trunc);
     output_file << result;
     output_file.close();
 

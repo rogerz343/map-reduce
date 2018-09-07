@@ -138,8 +138,48 @@ int Master::start_server() {
                     }
                     std::cout << "sent task to worker." << std::endl;
                 } else {
-                    // no tasks found.
-                    // TODO: idk what to do
+                    // No tasks to do currenty
+                    if (phase == Phase::map_phase) {
+                        if (map_tasks[TaskStatus::in_progress].empty()) {
+                            // Map phase done. Move on to grouping keys and reduce phase.
+                            std::cout << "All map tasks completed. Moving to next phase." << std::endl;
+                            group_keys();
+                            start_reduce_phase();
+                            phase = Phase::reduce_phase;
+
+                            t = assign_task(client);
+                            if (!t.empty()) {
+                                if (!send_to_client(client_fd, t)) {
+                                    close(client_fd);
+                                    freeaddrinfo(servinfo);
+                                    return 1;
+                                }
+                            } else {
+                                // No tasks found in reduce phase; nothing left for this machine to do.
+                                phase = Phase::finished_phase;
+                                if (!send_to_client(client_fd, DISCONNECT_MSG)) {
+                                    close(client_fd);
+                                    freeaddrinfo(servinfo);
+                                    return 1;
+                                }
+                            }
+                        } else {
+                            // Map phase still running on other machines. Tell client to come back
+                            // later to hopefully get a reduce task.
+                            if (!send_to_client(client_fd, WAIT_MSG)) {
+                                close(client_fd);
+                                freeaddrinfo(servinfo);
+                                return 1;
+                            }
+                        }
+                    } else if (phase == Phase::reduce_phase) {
+                        // No tasks found in reduce phase; nothing left for this machine to do.
+                        if (!send_to_client(client_fd, DISCONNECT_MSG)) {
+                            close(client_fd);
+                            freeaddrinfo(servinfo);
+                            return 1;
+                        }
+                    }
                 }
                 done_with_client = true;
                 close(client_fd);
@@ -179,25 +219,47 @@ int Master::start_server() {
                         return 1;
                     }
                 } else {
-                    // No tasks found; current phase is done.
-                    std::cout << "All current tasks completed. Moving to next phase." << std::endl;
+                    // No tasks found.
                     if (phase == Phase::map_phase) {
-                        group_keys();
-                        start_reduce_phase();
-                        phase = Phase::reduce_phase;
+                        if (map_tasks[TaskStatus::in_progress].empty()) {
+                            // Map phase done. Move on to grouping keys and reduce phase.
+                            std::cout << "All map tasks completed. Moving to next phase." << std::endl;
+                            group_keys();
+                            start_reduce_phase();
+                            phase = Phase::reduce_phase;
 
-                        t = assign_task(client);
-                        if (!t.empty()) {
-                            if (!send_to_client(client_fd, t)) {
+                            t = assign_task(client);
+                            if (!t.empty()) {
+                                if (!send_to_client(client_fd, t)) {
+                                    close(client_fd);
+                                    freeaddrinfo(servinfo);
+                                    return 1;
+                                }
+                            } else {
+                                // No tasks found in reduce phase; nothing left for this machine to do.
+                                phase = Phase::finished_phase;
+                                if (!send_to_client(client_fd, DISCONNECT_MSG)) {
+                                    close(client_fd);
+                                    freeaddrinfo(servinfo);
+                                    return 1;
+                                }
+                            }
+                        } else {
+                            // Map phase still running on other machines. Tell client to come back
+                            // later to hopefully get a reduce task.
+                            if (!send_to_client(client_fd, WAIT_MSG)) {
                                 close(client_fd);
                                 freeaddrinfo(servinfo);
                                 return 1;
                             }
-                        } else {
-                            phase = Phase::finished_phase;
                         }
                     } else if (phase == Phase::reduce_phase) {
-                        phase = Phase::finished_phase;
+                        // No tasks found in reduce phase; nothing left for this machine to do.
+                        if (!send_to_client(client_fd, DISCONNECT_MSG)) {
+                            close(client_fd);
+                            freeaddrinfo(servinfo);
+                            return 1;
+                        }
                     }
                 }
 

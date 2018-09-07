@@ -12,7 +12,9 @@
 
 #include "definitions.h"
 
-int client(std::string server_ip, std::string server_port, std::string map_exec, std::string reduce_exec) {
+int client(std::string server_ip, std::string server_port,
+        std::string map_exec, std::string reduce_exec,
+        int wait_time = 10) {
     struct addrinfo hints;
     struct addrinfo *servinfo;
 
@@ -86,34 +88,45 @@ int client(std::string server_ip, std::string server_port, std::string map_exec,
     std::cout << "received task from master." << std::endl;
 
     // in a loop: complete the task, tell the server that the task is completed,
-    // get a new task
+    // get a new task (or a message)
     do {
-        // complete the current task
-        Task curr_task(master_data);
-        std::ifstream task_file(curr_task);
-        std::string kv_filename;
-        if (curr_task.find(map_in_splits) != std::string::npos) {
-            while (std::getline(task_file, kv_filename)) {
+        // complete the current task (stored in master_data)
+        if (master_data == WAIT_MSG) {
+            sleep(wait_time);
+        } else if (master_data == DISCONNECT_MSG) {
+            close(sockfd);
+            break;
+        } else {
+            std::ifstream task_file(master_data);
+            if (master_data.find(map_in_splits) != std::string::npos) {
+                // Map tasks. kv_filename is the path to a file that contains one filepath in each
+                // line. Each filepath within this file is the argument to a call of ./maptask
+                std::string kv_filename;
+                while (std::getline(task_file, kv_filename)) {
+                    int status;
+                    pid_t pid = fork();
+                    if (pid != 0) {     // this is the parent process
+                        wait(&status);
+                    } else {            // this is the child process
+                        execl(map_exec.c_str(), map_exec.c_str(), kv_filename.c_str(), (char *) NULL);
+                    }
+                }
+            } else if (master_data.find(key_groups) != std::string::npos) {
+                // Reduce tasks. kv_filename is the path to a file. This filepath should be the
+                // argument to ./reducetask. Note that this differs from the map task case in that
+                // for map tasks, several "tasks" are sent by the server together as a batch. For
+                // reduce tasks, only 1 singleton key (with its values) is sent to a worker at a
+                // time.
                 int status;
                 pid_t pid = fork();
                 if (pid != 0) {     // this is the parent process
                     wait(&status);
                 } else {            // this is the child process
-                    execl(map_exec.c_str(), map_exec.c_str(), kv_filename.c_str(), (char *) NULL);
+                    execl(reduce_exec.c_str(), reduce_exec.c_str(), master_data.c_str(), (char *) NULL);
                 }
             }
-        } else if (curr_task.find(key_groups) != std::string::npos) {
-            while (std::getline(task_file, kv_filename)) {
-                int status;
-                pid_t pid = fork();
-                if (pid != 0) {     // this is the parent process
-                    wait(&status);
-                } else {            // this is the child process
-                    execl(reduce_exec.c_str(), reduce_exec.c_str(), kv_filename.c_str(), (char *) NULL);
-                }
-            }
+            task_file.close();
         }
-        task_file.close();
         master_data.clear();
 
         std::cout << "current task completed." << std::endl;
