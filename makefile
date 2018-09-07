@@ -1,7 +1,7 @@
-test: test_master run_worker
+test: run_master run_worker
 
-test_master: master.o machine.o definitions.h test_master.cpp
-	g++ -std=c++14 -Wall -o test_master test_master.cpp ./master.o ./machine.o
+run_master: master.o machine.o definitions.h run_master.cpp
+	g++ -std=c++14 -Wall -o run_master run_master.cpp ./master.o ./machine.o
 
 master.o: master.h master.cpp machine.o definitions.h 
 	g++ -std=c++14 -Wall -c master.cpp ./machine.o
@@ -24,7 +24,21 @@ clean:
 	rm -f maptask
 	rm -f reducetask
 	rm -f run_worker
-	rm -f test_master
+	rm -f run_master
+	rm -rf ./map_in_splits/
+	mkdir map_in_splits
+	touch map_in_splits/placeholder.txt
+	rm -rf ./map_out/
+	mkdir map_out
+	touch map_out/placeholder.txt
+	rm -rf ./red_out
+	mkdir red_out
+	touch red_out/placeholder.txt
+	rm -rf ./intermediate_out
+	mkdir intermediate_out
+	touch intermediate_out/placeholder.txt
+
+clear_output:
 	rm -rf ./map_in_splits/
 	mkdir map_in_splits
 	touch map_in_splits/placeholder.txt

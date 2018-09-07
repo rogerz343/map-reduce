@@ -202,11 +202,19 @@ int Master::start_server() {
 
                 // Record task as being finished
                 Machine client(client_host, client_service);
-                Task finished_task = map_machine_assignments[client];
-                map_tasks[TaskStatus::in_progress].erase(finished_task);
-                map_tasks[TaskStatus::finished].insert(finished_task);
-                map_task_assignments.erase(finished_task);
-                map_machine_assignments.erase(client);
+                if (phase == Phase::map_phase) {
+                    Task finished_task = map_machine_assignments[client];
+                    map_tasks[TaskStatus::in_progress].erase(finished_task);
+                    map_tasks[TaskStatus::finished].insert(finished_task);
+                    map_task_assignments.erase(finished_task);
+                    map_machine_assignments.erase(client);
+                } else if (phase == Phase::reduce_phase) {
+                    Task finished_task = reduce_machine_assignments[client];
+                    reduce_tasks[TaskStatus::in_progress].erase(finished_task);
+                    reduce_tasks[TaskStatus::finished].insert(finished_task);
+                    reduce_task_assignments.erase(finished_task);
+                    reduce_machine_assignments.erase(client);
+                }
 
                 // Find a new task to assign to worker.
                 Task t = assign_task(client);
