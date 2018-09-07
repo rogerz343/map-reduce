@@ -145,7 +145,6 @@ int Master::start_server() {
                             std::cout << "All map tasks completed. Moving to next phase." << std::endl;
                             group_keys();
                             start_reduce_phase();
-                            phase = Phase::reduce_phase;
 
                             t = assign_task(client);
                             if (!t.empty()) {
@@ -234,7 +233,6 @@ int Master::start_server() {
                             std::cout << "All map tasks completed. Moving to next phase." << std::endl;
                             group_keys();
                             start_reduce_phase();
-                            phase = Phase::reduce_phase;
 
                             t = assign_task(client);
                             if (!t.empty()) {
@@ -378,10 +376,10 @@ bool Master::start_reduce_phase() {
             std::string filename = file->d_name;
             if (filename == "." || filename == ".." || filename ==  "placeholder.txt") { continue; }
             std::string filepath = key_groups + filename;
-            std::ifstream kv_file(filepath);
             unassigned.insert(filepath);
         }
         closedir(key_groups_dir);
+        phase = Phase::reduce_phase;
         return true;
     } else {
         std::cout << "start_reduce_phase(): fatal: unable to open directory" << std::endl;

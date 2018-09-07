@@ -1,10 +1,10 @@
 test: run_master run_worker
 
-run_master: master.o machine.o definitions.h run_master.cpp
+run_master: run_master.cpp master.o machine.o definitions.h
 	g++ -std=c++14 -Wall -o run_master run_master.cpp ./master.o ./machine.o
 
 master.o: master.h master.cpp machine.o definitions.h 
-	g++ -std=c++14 -Wall -c master.cpp ./machine.o
+	g++ -std=c++14 -Wall -c master.cpp
 
 run_worker: run_worker.cpp definitions.h 
 	g++ -std=c++14 -Wall -o run_worker run_worker.cpp
