@@ -6,8 +6,11 @@ run_master: run_master.cpp master.o definitions.h
 master.o: master.h master.cpp definitions.h 
 	g++ -std=c++14 -Wall -c master.cpp
 
-run_worker: run_worker.cpp definitions.h 
-	g++ -std=c++14 -Wall -o run_worker run_worker.cpp
+run_worker: run_worker.cpp worker.o definitions.h
+	g++ -std=c++14 -Wall -o run_worker run_worker.cpp ./worker.o
+
+worker.o: worker.h worker.cpp definitions.h
+	g++ -std=c++14 -Wall -c worker.cpp
 
 maptask: maptask_template.cpp definitions.h
 	g++ -std=c++14 -Wall -o maptask maptask_template.cpp
