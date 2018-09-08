@@ -26,7 +26,6 @@
 #include <unistd.h>
 
 #include "definitions.h"
-#include "machine.h"
 
 class Master {
 private:
@@ -39,8 +38,8 @@ private:
     const std::string master_name;
     const std::string server_port;
 
-    // std::set<Machine> workers;      // future implementation: handle errors
-    std::map<Machine, MachineStatus> workers;
+    // future implementation: handle errors (i.e. worker dies)
+    // std::map<Machine, MachineStatus> workers;
 
     Phase phase;
 
@@ -56,6 +55,22 @@ private:
     std::map<Task, Machine> reduce_task_assignments;
     std::map<Machine, Task> reduce_machine_assignments;
 
+    /**
+     * Handles new connection from client: send a task. Caller of function is
+     * responsible for closing client_fd.
+     * 
+     * Returns true if successful, false otherwise.
+     */
+    bool handle_new_connection(int client_fd, const Machine &client);
+    
+    /**
+     * Performs operations when a worker connects with the message that the
+     * worker has finished a task. Caller of function is responsible for closing
+     * client_fd.
+     * 
+     * Returns true if successful, false otherwise.
+     */
+    bool handle_fin_task(int client_fd, const Machine &client);
 
     /**
      * Assigns a task (either map or reduce) to a worker and updates this Master's member data

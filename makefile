@@ -1,9 +1,9 @@
-test: run_master run_worker
+test: run_master run_worker maptask reducetask
 
-run_master: run_master.cpp master.o machine.o definitions.h
-	g++ -std=c++14 -Wall -o run_master run_master.cpp ./master.o ./machine.o
+run_master: run_master.cpp master.o definitions.h
+	g++ -std=c++14 -Wall -o run_master run_master.cpp ./master.o
 
-master.o: master.h master.cpp machine.o definitions.h 
+master.o: master.h master.cpp definitions.h 
 	g++ -std=c++14 -Wall -c master.cpp
 
 run_worker: run_worker.cpp definitions.h 
@@ -14,9 +14,6 @@ maptask: maptask_template.cpp definitions.h
 
 reducetask: reducetask_template.cpp definitions.h
 	g++ -std=c++14 -Wall -o reducetask reducetask_template.cpp
-
-machine.o: machine.h machine.cpp definitions.h
-	g++ -std=c++14 -Wall -c machine.cpp
 
 clean:
 	rm -f *.o

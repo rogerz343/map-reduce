@@ -12,6 +12,23 @@
 
 #include "definitions.h"
 
+// TODO: turn this entire file into a class
+std::string MACHINE_NAME = "blerg";
+
+bool send_to_server(int sockfd, std::string msg) {
+    if (DEBUG) { std::cout << "Sending: " << msg << std::endl; }
+    size_t total_sent = 0;
+    int bytes_sent;
+    do {
+        if ((bytes_sent = send(sockfd, msg.c_str(), msg.length(), 0)) == -1) {
+            std::cerr << "send(): " << strerror(errno) << std::endl;
+            return false;
+        }
+        total_sent += bytes_sent;
+    } while (total_sent < msg.length());
+    return true;
+}
+
 int client(std::string server_ip, std::string server_port,
         std::string map_exec, std::string reduce_exec,
         int wait_time = 10) {
@@ -50,23 +67,24 @@ int client(std::string server_ip, std::string server_port,
         return 1;
     }
 
-    // Leave this commented out. We need servinfo later.
-    // freeaddrinfo(servinfo);
-
     // Tell the server that we connected for the first time.
-    int total_sent = 0;
-    int bytes_sent;
-    do {
-        if ((bytes_sent = send(sockfd, CONNECT_MSG, CONNECT_MSG_LEN, 0)) == -1) {
-            std::cerr << "send(): " << strerror(errno) << std::endl;
-            close(sockfd);
-            freeaddrinfo(servinfo);
-            return 1;
-        }
-        total_sent += bytes_sent;
-    } while (total_sent < CONNECT_MSG_LEN);
+    if (!send_to_server(sockfd, CONNECT_MSG)) {
+        close(sockfd);
+        freeaddrinfo(servinfo);
+        return 1;
+    }
+    if (!send_to_server(sockfd, MACHINE_NAME)) {
+        close(sockfd);
+        freeaddrinfo(servinfo);
+        return 1;
+    }
+    if (!send_to_server(sockfd, END_MSG)) {
+        close(sockfd);
+        freeaddrinfo(servinfo);
+        return 1;
+    }
 
-    std::cout << "sent initial connect message to server." << std::endl;
+    if (DEBUG) { std::cout << "sent initial connect message to server." << std::endl; }
 
     // wait for first task from the master and then execute it
     std::string master_data;
@@ -80,12 +98,12 @@ int client(std::string server_ip, std::string server_port,
         }
 
         // master_data contains the task name at this point
-        master_data.append(buffer, BUFFER_SIZE);
+        master_data.append(buffer, bytes_received);
     } while (bytes_received > 0);
 
     close(sockfd);
 
-    std::cout << "received task from master." << std::endl;
+    if (DEBUG) { std::cout << "received task from master." << std::endl; }
 
     // in a loop: complete the task, tell the server that the task is completed,
     // get a new task (or a message)
@@ -101,6 +119,7 @@ int client(std::string server_ip, std::string server_port,
             if (master_data.find(map_in_splits) != std::string::npos) {
                 // Map tasks. kv_filename is the path to a file that contains one filepath in each
                 // line. Each filepath within this file is the argument to a call of ./maptask
+                if (DEBUG) { std::cout << "map task called on: " << master_data << std::endl; }
                 std::string kv_filename;
                 while (std::getline(task_file, kv_filename)) {
                     int status;
@@ -117,6 +136,7 @@ int client(std::string server_ip, std::string server_port,
                 // for map tasks, several "tasks" are sent by the server together as a batch. For
                 // reduce tasks, only 1 singleton key (with its values) is sent to a worker at a
                 // time.
+                if (DEBUG) { std::cout << "reduce tasked called on: " << master_data << std::endl; }
                 int status;
                 pid_t pid = fork();
                 if (pid != 0) {     // this is the parent process
@@ -127,9 +147,8 @@ int client(std::string server_ip, std::string server_port,
             }
             task_file.close();
         }
-        master_data.clear();
 
-        std::cout << "current task completed." << std::endl;
+        if (DEBUG) { std::cout << "current task completed." << std::endl; }
 
         // connect to server again to say that task is finished
         for (p = servinfo; p != nullptr; p = p->ai_next) {
@@ -153,19 +172,25 @@ int client(std::string server_ip, std::string server_port,
         }
 
         // Tell the server that the task is finished.
-        total_sent = 0;
-        do {
-            if ((bytes_sent = send(sockfd, FIN_TASK_MSG, FIN_TASK_MSG_LEN, 0)) == -1) {
-                std::cerr << "send(): " << strerror(errno) << std::endl;
-                close(sockfd);
-                freeaddrinfo(servinfo);
-                return 1;
-            }
-            total_sent += bytes_sent;
-        } while (total_sent < FIN_TASK_MSG_LEN);
+        if (!send_to_server(sockfd, FIN_TASK_MSG)) {
+            close(sockfd);
+            freeaddrinfo(servinfo);
+            return 1;
+        }
+        if (!send_to_server(sockfd, MACHINE_NAME)) {
+            close(sockfd);
+            freeaddrinfo(servinfo);
+            return 1;
+        }
+        if (!send_to_server(sockfd, END_MSG)) {
+            close(sockfd);
+            freeaddrinfo(servinfo);
+            return 1;
+        }
 
         // get a new task from the server (or the message that everything is done
-        std::cout << "waiting for another task from server." << std::endl;
+        if (DEBUG) { std::cout << "waiting for another task from server." << std::endl; }
+        master_data.clear();
         do {
             if ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0)) == -1) {
                 std::cerr << "recv(): " << strerror(errno);
@@ -173,7 +198,7 @@ int client(std::string server_ip, std::string server_port,
             }
 
             // master_data contains the task name at this point
-            master_data.append(buffer, BUFFER_SIZE);
+            master_data.append(buffer, bytes_received);
         } while (bytes_received > 0);
 
         close(sockfd);

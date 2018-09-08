@@ -92,11 +92,9 @@ int Master::start_server() {
             continue;
         }
 
-        std::cout << "connected to a client." << std::endl;
+        if (DEBUG) { std::cout << "connected to a client." << std::endl; }
 
-        // read bytes and communicate back and forth until client closes connection
-        bool errorflag = false;
-        bool done_with_client = false;
+        // read bytes and communicate back and forth until server or client closes connection
         std::string worker_data;
         int bytes_received;
         do {
@@ -105,183 +103,135 @@ int Master::start_server() {
                 break;
             }
 
-            // in the future, probably should write to a file; or not idk
             worker_data.append(recv_buffer, bytes_received);
 
-            // New worker connected: assign it a task.
-            if (worker_data.find(CONNECT_MSG) == 0) {
+            // If new worker connected, assign it a task.
+            if (worker_data.rfind(END_MSG) != std::string::npos
+                    && worker_data.find(CONNECT_MSG) != std::string::npos) {
                 worker_data.erase(0, CONNECT_MSG_LEN);
+                worker_data.erase(worker_data.length() - END_MSG_LEN, END_MSG_LEN);
 
-                std::cout << "New worker has connected." << std::endl;
-
-                // get info about the message sender
-                char client_host[1024];
-                char client_service[20];
-                if ((status = getnameinfo((sockaddr *) &client_addr, addr_size, client_host, sizeof(client_host), client_service, sizeof(client_service), 0)) != 0) {
-                    std::cerr << "getnameinfo(): " << gai_strerror(status) << std::endl << "Skipping." << std::endl;
-                    errorflag = true;
-                    continue;
+                // worker_data now contains worker's machine name
+                if (!handle_new_connection(client_fd, worker_data)) {
+                    close(client_fd);
+                    freeaddrinfo(servinfo);
+                    return 1;
                 }
-
-                Machine client(client_host, client_service);
-                workers[client] = MachineStatus::idle;
-
-                // Pick an unassigned task (filepath/name) to send to the worker
-                Task t = assign_task(client);
-
-                // send the task file over
-                if (!t.empty()) {
-                    if (!send_to_client(client_fd, t)) {
-                        close(client_fd);
-                        freeaddrinfo(servinfo);
-                        return 1;
-                    }
-                    std::cout << "sent task to worker." << std::endl;
-                } else {
-                    // No tasks to do currenty
-                    if (phase == Phase::map_phase) {
-                        if (map_tasks[TaskStatus::in_progress].empty()) {
-                            // Map phase done. Move on to grouping keys and reduce phase.
-                            std::cout << "All map tasks completed. Moving to next phase." << std::endl;
-                            group_keys();
-                            start_reduce_phase();
-
-                            t = assign_task(client);
-                            if (!t.empty()) {
-                                if (!send_to_client(client_fd, t)) {
-                                    close(client_fd);
-                                    freeaddrinfo(servinfo);
-                                    return 1;
-                                }
-                            } else {
-                                // No tasks found in reduce phase; nothing left for this machine to do.
-                                phase = Phase::finished_phase;
-                                if (!send_to_client(client_fd, DISCONNECT_MSG)) {
-                                    close(client_fd);
-                                    freeaddrinfo(servinfo);
-                                    return 1;
-                                }
-                            }
-                        } else {
-                            // Map phase still running on other machines. Tell client to come back
-                            // later to hopefully get a reduce task.
-                            if (!send_to_client(client_fd, WAIT_MSG)) {
-                                close(client_fd);
-                                freeaddrinfo(servinfo);
-                                return 1;
-                            }
-                        }
-                    } else if (phase == Phase::reduce_phase) {
-                        // No tasks found in reduce phase; nothing left for this machine to do.
-                        if (!send_to_client(client_fd, DISCONNECT_MSG)) {
-                            close(client_fd);
-                            freeaddrinfo(servinfo);
-                            return 1;
-                        }
-                    }
-                }
-                done_with_client = true;
                 close(client_fd);
+                break;
             }
 
             // Worker has finished task. Record this and give the worker a new task (if applicable).
-            if (worker_data.find(FIN_TASK_MSG) == 0) {
+            if (worker_data.rfind(END_MSG) != std::string::npos
+                    && worker_data.find(FIN_TASK_MSG) != std::string::npos) {
                 worker_data.erase(0, FIN_TASK_MSG_LEN);
+                worker_data.erase(worker_data.length() - END_MSG_LEN, END_MSG_LEN);
 
-                std::cout << "Worker has finished a task." << std::endl;
-
-                // get info about the message sender
-                char client_host[1024];
-                char client_service[20];
-                if ((status = getnameinfo((sockaddr *) &client_addr, addr_size, client_host, sizeof(client_host), client_service, sizeof(client_service), 0)) != 0) {
-                    std::cerr << "getnameinfo(): " << gai_strerror(status) << std::endl << "Skipping." << std::endl;
-                    errorflag = true;
-                    continue;
+                // worker_data now contains worker's machine name
+                if (!handle_fin_task(client_fd, worker_data)) {
+                    close(client_fd);
+                    freeaddrinfo(servinfo);
+                    return 1;
                 }
-
-                // Record task as being finished
-                Machine client(client_host, client_service);
-                if (phase == Phase::map_phase) {
-                    Task finished_task = map_machine_assignments[client];
-                    map_tasks[TaskStatus::in_progress].erase(finished_task);
-                    map_tasks[TaskStatus::finished].insert(finished_task);
-                    map_task_assignments.erase(finished_task);
-                    map_machine_assignments.erase(client);
-                } else if (phase == Phase::reduce_phase) {
-                    Task finished_task = reduce_machine_assignments[client];
-                    reduce_tasks[TaskStatus::in_progress].erase(finished_task);
-                    reduce_tasks[TaskStatus::finished].insert(finished_task);
-                    reduce_task_assignments.erase(finished_task);
-                    reduce_machine_assignments.erase(client);
-                }
-
-                // Find a new task to assign to worker.
-                Task t = assign_task(client);
-
-                // Send the new task to the worker.
-                if (!t.empty()) {
-                    if (!send_to_client(client_fd, t)) {
-                        close(client_fd);
-                        freeaddrinfo(servinfo);
-                        return 1;
-                    }
-                } else {
-                    // No tasks found.
-                    if (phase == Phase::map_phase) {
-                        if (map_tasks[TaskStatus::in_progress].empty()) {
-                            // Map phase done. Move on to grouping keys and reduce phase.
-                            std::cout << "All map tasks completed. Moving to next phase." << std::endl;
-                            group_keys();
-                            start_reduce_phase();
-
-                            t = assign_task(client);
-                            if (!t.empty()) {
-                                if (!send_to_client(client_fd, t)) {
-                                    close(client_fd);
-                                    freeaddrinfo(servinfo);
-                                    return 1;
-                                }
-                            } else {
-                                // No tasks found in reduce phase; nothing left for this machine to do.
-                                phase = Phase::finished_phase;
-                                if (!send_to_client(client_fd, DISCONNECT_MSG)) {
-                                    close(client_fd);
-                                    freeaddrinfo(servinfo);
-                                    return 1;
-                                }
-                            }
-                        } else {
-                            // Map phase still running on other machines. Tell client to come back
-                            // later to hopefully get a reduce task.
-                            if (!send_to_client(client_fd, WAIT_MSG)) {
-                                close(client_fd);
-                                freeaddrinfo(servinfo);
-                                return 1;
-                            }
-                        }
-                    } else if (phase == Phase::reduce_phase) {
-                        // No tasks found in reduce phase; nothing left for this machine to do.
-                        if (!send_to_client(client_fd, DISCONNECT_MSG)) {
-                            close(client_fd);
-                            freeaddrinfo(servinfo);
-                            return 1;
-                        }
-                    }
-                }
-
-                done_with_client = true;
                 close(client_fd);
+                break;
             }
-
-        } while (!errorflag && !done_with_client && bytes_received > 0);
-
-        std::cout << "closing connection to client." << std::endl;
-        close(client_fd);
+        } while (bytes_received > 0);
     }
 
     close(sockfd);
     freeaddrinfo(servinfo);
+    
+    std::cout << "Master has finished executing. Exiting." << std::endl;
     return 0;
+}
+
+bool Master::handle_new_connection(int client_fd, const Machine &client) {
+    if (DEBUG) { std::cout << "New worker has connected." << std::endl; }
+
+    // Pick an unassigned Task (filepath/name) to send to the worker
+    Task t = assign_task(client);
+    if (!t.empty()) {
+        if (!send_to_client(client_fd, t)) { return false; }
+    } else {
+        // No tasks to do currenty
+        if (phase == Phase::map_phase) {
+            if (map_tasks[TaskStatus::in_progress].empty()) {
+                // Map phase done. Move on to grouping keys and reduce phase.
+                std::cout << "All map tasks completed. Moving to next phase." << std::endl;
+                group_keys();
+                start_reduce_phase();
+
+                t = assign_task(client);
+                if (!t.empty()) {
+                    if (!send_to_client(client_fd, t)) { return false; }
+                } else {
+                    // No tasks found in reduce phase; nothing left for this machine to do.
+                    phase = Phase::finished_phase;
+                    if (!send_to_client(client_fd, DISCONNECT_MSG)) { return false; }
+                }
+            } else {
+                // Map phase still running on other machines. Tell client to come back
+                // later to hopefully get a reduce task.
+                if (!send_to_client(client_fd, WAIT_MSG)) { return false; }
+            }
+        } else if (phase == Phase::reduce_phase) {
+            // No tasks found in reduce phase; nothing left for this machine to do.
+            if (!send_to_client(client_fd, DISCONNECT_MSG)) { return false; }
+        }
+    }
+    return true;
+}
+
+bool Master::handle_fin_task(int client_fd, const Machine &client) {
+    if (DEBUG) { std::cout << "Worker has finished a task." << std::endl; }
+
+    // Record task as being finished
+    if (phase == Phase::map_phase) {
+        Task finished_task = map_machine_assignments[client];
+        map_tasks[TaskStatus::in_progress].erase(finished_task);
+        map_tasks[TaskStatus::finished].insert(finished_task);
+        map_task_assignments.erase(finished_task);
+        map_machine_assignments.erase(client);
+    } else if (phase == Phase::reduce_phase) {
+        Task finished_task = reduce_machine_assignments[client];
+        reduce_tasks[TaskStatus::in_progress].erase(finished_task);
+        reduce_tasks[TaskStatus::finished].insert(finished_task);
+        reduce_task_assignments.erase(finished_task);
+        reduce_machine_assignments.erase(client);
+    }
+
+    // Find a new task to assign to worker.
+    Task t = assign_task(client);
+    if (!t.empty()) {
+        if (!send_to_client(client_fd, t)) { return false; }
+    } else {
+        // No tasks found.
+        if (phase == Phase::map_phase) {
+            if (map_tasks[TaskStatus::in_progress].empty()) {
+                // Map phase done. Move on to grouping keys and reduce phase.
+                if (DEBUG) { std::cout << "All map tasks completed. Moving to next phase." << std::endl; }
+                group_keys();
+                start_reduce_phase();
+
+                t = assign_task(client);
+                if (!t.empty()) {
+                    if (!send_to_client(client_fd, t)) { return false; }
+                } else {
+                    // No tasks found in reduce phase; nothing left for this machine to do.
+                    if (!send_to_client(client_fd, DISCONNECT_MSG)) { return false; }
+                }
+            } else {
+                // Map phase still running on other machines. Tell client to come back
+                // later to hopefully get a reduce task.
+                if (!send_to_client(client_fd, WAIT_MSG)) { return false; }
+            }
+        } else if (phase == Phase::reduce_phase) {
+            // No tasks found in reduce phase; nothing left for this machine to do.
+            if (!send_to_client(client_fd, DISCONNECT_MSG)) { return false; }
+        }
+    }
+    return true;
 }
 
 Task Master::assign_task(const Machine &client) {
@@ -312,6 +262,7 @@ Task Master::assign_task(const Machine &client) {
 }
 
 bool Master::send_to_client(int client_fd, std::string msg) {
+    if (DEBUG) { std::cout << "Sending: " << msg << std::endl; }
     size_t total_sent = 0;
     int bytes_sent;
     do {
@@ -325,7 +276,7 @@ bool Master::send_to_client(int client_fd, std::string msg) {
 }
 
 bool Master::group_keys() {
-    std::cout << "group_keys() called." << std::endl;
+    if (DEBUG) { std::cout << "group_keys() called." << std::endl; }
 
     std::unordered_map<std::string, std::vector<std::string>> intermediate_keys;
 
@@ -358,7 +309,7 @@ bool Master::group_keys() {
             }
             output_file.close();
         }
-        std::cout << "group_keys() ran successfully." << std::endl;
+        if (DEBUG) { std::cout << "group_keys() ran successfully." << std::endl; }
         return true;
     } else {
         std::cout << "group_keys(): fatal: unable to open directory" << std::endl;
@@ -367,7 +318,7 @@ bool Master::group_keys() {
 }
 
 bool Master::start_reduce_phase() {
-    std::cout << "start_reduce_phase() called." << std::endl;
+    if (DEBUG) { std::cout << "start_reduce_phase() called." << std::endl; }
     std::unordered_set<Task> &unassigned = reduce_tasks[TaskStatus::unassigned];
     DIR *key_groups_dir;
     struct dirent *file;
@@ -375,7 +326,7 @@ bool Master::start_reduce_phase() {
         while ((file = readdir(key_groups_dir)) != NULL) {
             std::string filename = file->d_name;
             if (filename == "." || filename == ".." || filename ==  "placeholder.txt") { continue; }
-            std::string filepath = key_groups + filename;
+            std::string filepath(key_groups + filename);
             unassigned.insert(filepath);
         }
         closedir(key_groups_dir);

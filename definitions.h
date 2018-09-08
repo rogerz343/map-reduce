@@ -4,6 +4,14 @@
 // Some definitions that are used throughout the program. They should
 // probably be put in more specific .h files.
 
+// DEBUG should only be used with informative messages. Fatal errors should
+// still be printed in any case.
+constexpr bool DEBUG = true;
+
+// A Machine is the (unique) name for a client/worker, chosen by the worker when
+// it starts up.
+typedef std::string Machine;
+
 // A Task is defined as the input filepath. This path is relative to the root
 // directory of this project.
 typedef std::string Task;
@@ -21,25 +29,27 @@ enum class TaskStatus { unassigned, in_progress, finished };
 enum class MachineStatus { idle, in_progress, finished, failed };
 enum class Phase { map_phase, intermediate_phase, reduce_phase, finished_phase };
 
+// message that indicates end of current message
+constexpr char END_MSG[] = "###end###";
+constexpr int END_MSG_LEN = 9;
+
 // message that client sends to server when it connects for the first time
+// this specific string also serves the purpose of END_MSG
 constexpr char CONNECT_MSG[] = "###connected###";
 constexpr int CONNECT_MSG_LEN = 15;
-
-// message that server sends to client to indicate a new task
-// ***NOTE*** this is currently unused
-constexpr char NEW_TASK_MSG[] = "###new_task_file###";
-constexpr int NEW_TASK_MSG_LEN = 19;
 
 // message that client sends to server when it finishes a task
 constexpr char FIN_TASK_MSG[] = "###finished_task###";
 constexpr int FIN_TASK_MSG_LEN = 19;
 
 // message that server sends to client to tell it to wait and reconnect later
+// this specific string also serves the purpose of END_MSG
 constexpr char WAIT_MSG[] = "###wait###";
 constexpr int WAIT_MSG_LEN = 10;
 
 // message that server sends to client to tell it that everything is done and
 // it's safe to disconnect.
+// this specific string also serves the purpose of END_MSG
 constexpr char DISCONNECT_MSG[] = "###disconnect###";
 constexpr int DISCONNECT_MSG_LEN = 16;
 
