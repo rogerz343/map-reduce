@@ -25,7 +25,6 @@ The following directories must exist with the exact names:
 It is up to the user to determine what each `string` represents and to parse them. For example, the final result (the output of `reduce`) could be a list.
 
 ## TODO
-- add more error checking and failure handling
+- error checking, handling failures appropriately
 - use (smart) pointers when copying in vectors so you don't copy by value
 - general make code more efficient
-- change wrap std::cout in a function that's only called when debug mode is on
