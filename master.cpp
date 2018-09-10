@@ -154,7 +154,7 @@ bool Master::handle_new_connection(int client_fd, const Machine &client) {
     if (!t.empty()) {
         if (!send_to_client(client_fd, t)) { return false; }
     } else {
-        // No tasks to do currenty
+        // No tasks to do currently
         if (phase == Phase::map_phase) {
             if (map_tasks[TaskStatus::in_progress].empty()) {
                 // Map phase done. Move on to grouping keys and reduce phase.
