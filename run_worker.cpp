@@ -13,6 +13,6 @@ int main(int argc, char* argv[]) {
         std::cout << "Usage: ./run_worker [worker_name] [server ip] [server port] [maptask filepath] [reducetask filepath] [wait_time]" << std::endl;
         return 1;
     }
-    Worker worker(argv[1], argv[2], argv[3], argv[4], argv[5], atoi(argv[6]));
+    Worker worker(argv[1], argv[2], argv[3], argv[4], argv[5], std::stoi(argv[6]));
     return worker.run_client();
 }

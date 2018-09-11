@@ -30,6 +30,6 @@ int main(int argc, char *argv[]) {
         // perror ("");
         return 1;
     }
-    Master m(argv[1], argv[3], input, 1);
+    Master m(argv[1], argv[3], input, std::stoi(argv[4]));
     m.start_server();
 }
